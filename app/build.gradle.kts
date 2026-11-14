@@ -12,8 +12,8 @@ android {
         applicationId = "textforge.app"
         minSdk = 23
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.2.0"
     }
     compileOptions {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -22,6 +22,18 @@ android {
 
     buildFeatures {
         compose = true
+    }
+
+    buildTypes {
+        release {
+            // Enable R8 code shrinking/optimization and remove unused resources.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
     }
 }
 
