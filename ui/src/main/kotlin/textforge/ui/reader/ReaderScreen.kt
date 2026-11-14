@@ -566,8 +566,7 @@ fun ReaderScreen(
                     Text(
                     text = "‹",
                     style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme
-                    colorScheme.onSurface,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(bottom = 4.dp)
     )
 }
