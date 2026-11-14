@@ -64,8 +64,8 @@ fun LibraryScreen(
                 .padding(scaffoldPadding).padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Book, contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary)
+                Text("▤", color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.width(10.dp))
                 Text("Your Library", style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onBackground)
@@ -82,10 +82,13 @@ fun LibraryScreen(
             } else if (novels.isEmpty()) {
                 Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.Book, contentDescription = null,
-                            modifier = Modifier.size(52.dp),
-                            tint = MaterialTheme.colorScheme.secondary)
-                        Spacer(Modifier.height(16.dp))
+                    Text(
+                    text = "▤",
+                    modifier = Modifier.size(52.dp),
+                    style = MaterialTheme.typography.displayMedium,
+                    color = MaterialTheme.colorScheme.secondary
+                    )
+                    Spacer(Modifier.height(16.dp))
                         Text("Your library is waiting", style = MaterialTheme.typography.titleLarge)
                         Spacer(Modifier.height(6.dp))
                         Text("Add your first novel to start reading.",
@@ -108,8 +111,8 @@ fun LibraryScreen(
                         ) {
                             Row(Modifier.fillMaxWidth().padding(16.dp),
                                 verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Book, contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary)
+                                Text("▤", color = MaterialTheme.colorScheme.primary,
+    style = MaterialTheme.typography.titleLarge)
                                 Spacer(Modifier.width(14.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(novel.title, style = MaterialTheme.typography.titleMedium,

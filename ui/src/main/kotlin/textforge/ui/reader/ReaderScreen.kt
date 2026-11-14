@@ -14,9 +14,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -566,11 +563,14 @@ fun ReaderScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back to library"
-                        )
-                    }
+                    Text(
+                    text = "‹",
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme
+                    colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 4.dp)
+    )
+}
 
                     Spacer(Modifier.weight(1f))
 
@@ -599,10 +599,11 @@ fun ReaderScreen(
                         onClick = { showMenu = true },
                         shape = RoundedCornerShape(50.dp)
                     ) {
-                        Icon(
-                            Icons.Default.KeyboardArrowUp,
-                            contentDescription = "Reader menu"
-                        )
+                        Text(
+                        text = "⌃",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+)
 
                         Spacer(Modifier.width(8.dp))
 
