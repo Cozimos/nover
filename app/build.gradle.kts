@@ -25,13 +25,15 @@ android {
     }
 
     buildTypes {
-        release {
-            // Enable R8 code shrinking/optimization and remove unused resources.
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+    release {
+        // Sign with the local debug key for personal installation.
+        signingConfig = signingConfigs.getByName("debug")
+
+        isMinifyEnabled = true
+        isShrinkResources = true
+        proguardFiles(
+            getDefaultProguardFile("proguard-android-optimize.txt"),
+            "proguard-rules.pro"
             )
         }
     }
