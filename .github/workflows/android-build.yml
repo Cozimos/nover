@@ -38,10 +38,10 @@ jobs:
           gradle-version: '8.13'
 
       - name: Build APK
-        run: gradle :app:assembleDebug
+        run: gradle :app:assembleRelease
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: TextForge-debug
-          path: app/build/outputs/apk/debug/*.apk
+          name: Android Build
+          path: app/build/outputs/apk/release/*.apk
