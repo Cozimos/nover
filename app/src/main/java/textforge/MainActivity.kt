@@ -6,44 +6,52 @@ import android.os.Bundle
 import java.io.File
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.mutableStateOf
 import textforge.navigation.AppNavigation
+import textforge.ui.AppTypography
 
 class MainActivity : ComponentActivity() {
-    private val incomingUri = mutableStateOf<Uri?>(null)
+private val incomingUri = mutableStateOf<Uri?>(null)
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        incomingUri.value = extractUri(intent)
-        setContent {
+override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    incomingUri.value = extractUri(intent)
+
+    setContent {
+        MaterialTheme(
+            typography = AppTypography
+        ) {
             AppNavigation(
                 incomingUri = incomingUri.value,
                 onIncomingUriConsumed = { incomingUri.value = null }
             )
         }
     }
+}
 
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-        incomingUri.value = extractUri(intent)
-    }
+override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
+    incomingUri.value = extractUri(intent)
+}
 
-    @Suppress("DEPRECATION")
-    private fun extractUri(intent: Intent?): Uri? {
-        if (intent == null) return null
-        return when (intent.action) {
-            Intent.ACTION_VIEW -> intent.data
-            Intent.ACTION_SEND -> intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
-                ?: intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()?.let { shared ->
-                    val parsed = runCatching { Uri.parse(shared) }.getOrNull()
-                    when {
-                        parsed?.scheme == "content" || parsed?.scheme == "file" -> parsed
-                        File(shared).isAbsolute -> Uri.fromFile(File(shared))
-                        else -> null
-                    }
+@Suppress("DEPRECATION")
+private fun extractUri(intent: Intent?): Uri? {
+    if (intent == null) return null
+    return when (intent.action) {
+        Intent.ACTION_VIEW -> intent.data
+        Intent.ACTION_SEND -> intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+            ?: intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()?.let { shared ->
+                val parsed = runCatching { Uri.parse(shared) }.getOrNull()
+                when {
+                    parsed?.scheme == "content" || parsed?.scheme == "file" -> parsed
+                    File(shared).isAbsolute -> Uri.fromFile(File(shared))
+                    else -> null
                 }
-            else -> null
-        }
+            }
+        else -> null
     }
+}
+
 }
