@@ -118,36 +118,35 @@ object NovelMarkdownParser {
             val paragraph = mutableListOf<String>()
 
             while (i < lines.size) {
+            val current = lines[i]
 
-                val current = lines[i]
+            if (current.isBlank()) break
 
-                if (current.isBlank()) break
+            val currentTrimmed = current.trim()
 
-                val currentTrimmed = current.trim()
-
-                if (
-                    currentTrimmed == "[" ||
-                    Regex("^#{1,6}\\s+.+$").matches(currentTrimmed)
-                ) {
-                    break
-                }
-
-                paragraph.add(current)
-                i++
+            if (
+                currentTrimmed == "[" ||
+                Regex("^#{1,6}\\s+.+$").matches(currentTrimmed)
+            ) {
+                break
             }
 
-            if (paragraph.isNotEmpty()) {
+            paragraph.add(current)
+            i++
+        }
 
-            val segments = parseSegments(
-                paragraph.joinToString("\n")
-)
-    blocks.add(
-    NovelBlock.Paragraph(
-        segments = segments,
-        fullHighlight = segments.any { it.highlighted }
+if (paragraph.isNotEmpty()) {
+    val segments = parseSegments(
+        paragraph.joinToString("\n")
     )
-)
-)
+
+    blocks.add(
+        NovelBlock.Paragraph(
+            segments = segments,
+            fullHighlight = segments.any { it.highlighted }
+        )
+    )
+}
             }
         }
 
