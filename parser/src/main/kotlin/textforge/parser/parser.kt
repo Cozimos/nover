@@ -142,10 +142,10 @@ object NovelMarkdownParser {
                 paragraph.joinToString("\n")
             ),
             fullHighlight = false
+            )
         )
-    )
-}
-        
+    }
+}        
 
         return NovelDocument(
             blocks = blocks,
