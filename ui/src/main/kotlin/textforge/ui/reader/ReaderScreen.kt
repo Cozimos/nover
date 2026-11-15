@@ -44,6 +44,7 @@ import textforge.storage.ReadingProgress
 import textforge.ui.NovelColors
 import textforge.ui.dictionary.StarDictManager
 import textforge.ui.components.DictionaryHtmlView
+import androidx.compose.foundation.clickable
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
