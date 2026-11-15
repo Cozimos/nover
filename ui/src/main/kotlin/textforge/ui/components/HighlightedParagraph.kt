@@ -39,7 +39,7 @@ fun HighlightedParagraph(
                 .onGloballyPositioned(onTextPositioned),
             color = Color(0xFF171A1D),
             fontSize = 17.sp,
-            lineHeight = 17.sp,
+            lineHeight = 24.sp,
             softWrap = true,
             maxLines = Int.MAX_VALUE,
             overflow = TextOverflow.Clip,
