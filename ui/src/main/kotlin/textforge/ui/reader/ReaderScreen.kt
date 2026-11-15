@@ -578,7 +578,7 @@ fun ReaderScreen(
             }
         }
 
-        // BOTTOM READER BAR
+                // BOTTOM READER BAR
         AnimatedVisibility(
             visible = showBars,
             modifier = Modifier.align(Alignment.BottomCenter)
@@ -587,31 +587,18 @@ fun ReaderScreen(
                 color = NovelColors.MenuBackground,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(15.dp),
-                    contentAlignment = Alignment.Center
-                ) FilledTonalButton(
-    onClick = { showMenu = true },
-    shape = RoundedCornerShape(50.dp)
-) {
-    Text(
-        text = "⌃",
-        style = MaterialTheme.typography.titleLarge,
-        color = MaterialTheme.colorScheme.onSurface
-    )
-}
-
-                        Spacer(Modifier.width(8.dp))
-
-                        Text("Reader Menu")
-                    }
+            Row(
+                 modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(15.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text("Reader Menu")
                 }
             }
         }
-    }
 
     // READER MENU
     if (showMenu) {
