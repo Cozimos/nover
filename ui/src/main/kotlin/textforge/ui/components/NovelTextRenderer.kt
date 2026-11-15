@@ -22,34 +22,45 @@ fun NovelTextRenderer(
                 level = block.level
             )
         }
-        is NovelBlock.Paragraph -> {
-    val annotatedText = buildAnnotatedString {
-        block.segments.forEach { segment ->
-            val start = length
-            append(segment.text)
-            val end = length
 
-            if (segment.italic) {
-                addStyle(
-                    SpanStyle(fontStyle = FontStyle.Italic),
-                    start,
-                    end
+        is NovelBlock.Paragraph -> {
+            val annotatedText = buildAnnotatedString {
+                block.segments.forEach { segment ->
+                    val start = length
+                    append(segment.text)
+                    val end = length
+
+                    if (segment.highlighted || segment.italic) {
+                        addStyle(
+                            SpanStyle(
+                                background = if (
+                                    segment.highlighted && !block.fullHighlight
+                                ) Color(0xFF818890)
+                                else Color.Transparent,
+                                fontStyle = if (segment.italic) {
+                                    FontStyle.Italic
+                                } else {
+                                    FontStyle.Normal
+                                }
+                            ),
+                            start,
+                            end
+                        )
+                    }
+                }
+            }
+
+            if (block.fullHighlight) {
+                HighlightedParagraph(
+                    text = annotatedText,
+                    modifier = modifier
+                )
+            } else {
+                InlineHighlight(
+                    text = annotatedText,
+                    modifier = modifier.padding(vertical = 9.dp)
                 )
             }
         }
-    }
-
-    if (block.fullHighlight) {
-        HighlightedParagraph(
-            text = annotatedText,
-            modifier = modifier
-        )
-    } else {
-        InlineHighlight(
-            text = annotatedText,
-            modifier = modifier.padding(vertical = 9.dp)
-        )
-    }
-}
     }
 }
