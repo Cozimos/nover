@@ -558,18 +558,18 @@ fun ReaderScreen(
             ) {
                 Row(
                     modifier = Modifier
-                        .statusBarsPadding()
-                        .padding(horizontal = 8.dp),
+                    .statusBarsPadding()
+                    .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = onBack) {
-                    Text(
+                                        IconButton(onClick = onBack) {
+                        Text(
                     text = "‹",
                     style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(bottom = 4.dp)
-    )
-}
+                        )
+                    }
 
                     Spacer(Modifier.weight(1f))
 
