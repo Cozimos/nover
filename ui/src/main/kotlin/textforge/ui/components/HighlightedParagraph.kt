@@ -1,5 +1,6 @@
 package textforge.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,20 +26,23 @@ fun HighlightedParagraph(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        // Card fill, not text highlight: fills full width even on multiline
-        color = Color(0xFF009494),
-        shape = RoundedCornerShape(3.dp)
+            .padding(vertical = 3.dp),
+        color = Color(0xFF818890),
+        contentColor = Color(0xFF171A1D),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(
+            1.dp,
+            Color(0xFF626B73)
+        )
     ) {
         Text(
             text = text,
             modifier = Modifier
-                .padding(4.dp)
+                .padding(horizontal = 9.dp, vertical = 6.dp)
                 .onGloballyPositioned(onTextPositioned),
-            // White for contrast on #009494, old #252525 was unreadable on cyan
-            color = Color.White,
+            color = Color(0xFF171A1D),
             fontSize = 17.sp,
-            lineHeight = 18.sp,
+            lineHeight = 24.sp,
             onTextLayout = onTextLayout
         )
     }

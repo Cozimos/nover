@@ -595,7 +595,13 @@ fun ReaderScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    Text("Reader Menu")
+                    Text(
+    text = "Reader Menu",
+    modifier = Modifier.clickable {
+        showMenu = true
+    },
+    color = MaterialTheme.colorScheme.onSurface
+)
                 }
             }
         }

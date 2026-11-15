@@ -37,13 +37,9 @@ fun InlineHighlight(
             .drawBehind {
                 val layout = layoutResult ?: return@drawBehind
 
-                val ranges = mutableListOf<IntRange>()
-
-                text.spanStyles.forEach { range ->
-                    if (range.item.background != Color.Transparent) {
-                        ranges.add(range.start until range.end)
-                    }
-                }
+                val ranges = text.spanStyles
+                    .filter { it.item.background != Color.Transparent }
+                    .map { it.start until it.end }
 
                 ranges.forEach { range ->
                     val boxes = range.mapNotNull { index ->
@@ -51,31 +47,26 @@ fun InlineHighlight(
                         layout.getBoundingBox(index)
                     }
 
-                    val grouped = boxes.groupBy { it.top.toInt() }
-
-                    grouped.values.forEach { lineBoxes ->
+                    boxes.groupBy { it.top.toInt() }.values.forEach { lineBoxes ->
                         if (lineBoxes.isEmpty()) return@forEach
 
                         val left = lineBoxes.minOf { it.left } - 2.dp.toPx()
                         val right = lineBoxes.maxOf { it.right } + 2.dp.toPx()
-                        val top = lineBoxes.minOf { it.top } - 3.dp.toPx()
-                        val bottom = lineBoxes.maxOf { it.bottom } + 3.dp.toPx()
+                        val top = lineBoxes.minOf { it.top } - 2.dp.toPx()
+                        val bottom = lineBoxes.maxOf { it.bottom } + 2.dp.toPx()
 
                         drawRoundRect(
-                            color = Color(0xFF009494),
+                            color = Color(0xFF818890),
                             topLeft = Offset(left, top),
-                            size = Size(
-                                right - left,
-                                bottom - top
-                            ),
-                            cornerRadius = CornerRadius(0.dp.toPx())
+                            size = Size(right - left, bottom - top),
+                            cornerRadius = CornerRadius(5.dp.toPx())
                         )
                     }
                 }
             },
         fontSize = fontSize,
         lineHeight = lineHeight,
-        color = Color(0xFF252525),
+        color = Color(0xFF171A1D),
         onTextLayout = {
             layoutResult = it
             onTextLayout(it)
