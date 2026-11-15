@@ -118,35 +118,34 @@ object NovelMarkdownParser {
             val paragraph = mutableListOf<String>()
 
             while (i < lines.size) {
-            val current = lines[i]
+                val current = lines[i]
 
-            if (current.isBlank()) break
+                if (current.isBlank()) break
 
-            val currentTrimmed = current.trim()
+                val currentTrimmed = current.trim()
 
-            if (
-                currentTrimmed == "[" ||
-                Regex("^#{1,6}\\s+.+$").matches(currentTrimmed)
-            ) {
-                break
+                if (
+                    currentTrimmed == "[" ||
+                    Regex("^#{1,6}\\s+.+$").matches(currentTrimmed)
+                ) {
+                    break
+                }
+
+                paragraph.add(current)
+                i++
             }
 
-            paragraph.add(current)
-            i++
-        }
+            if (paragraph.isNotEmpty()) {
+                val segments = parseSegments(
+                    paragraph.joinToString("\n")
+                )
 
-if (paragraph.isNotEmpty()) {
-    val segments = parseSegments(
-        paragraph.joinToString("\n")
-    )
-
-    blocks.add(
-        NovelBlock.Paragraph(
-            segments = segments,
-            fullHighlight = segments.any { it.highlighted }
-        )
-    )
-}
+                blocks.add(
+                    NovelBlock.Paragraph(
+                        segments = segments,
+                        fullHighlight = segments.any { it.highlighted }
+                    )
+                )
             }
         }
 
@@ -158,16 +157,21 @@ if (paragraph.isNotEmpty()) {
 
     private fun findItalicEnd(source: String, open: Int): Int {
         var j = open + 2
+
         while (j < source.length) {
             if (source[j] == '\'') {
                 val before = source[j - 1]
                 val after = source.getOrNull(j + 1)
-                if (!before.isWhitespace() && (after == null || !after.isLetterOrDigit())) {
+
+                if (!before.isWhitespace() &&
+                    (after == null || !after.isLetterOrDigit())
+                ) {
                     return j
                 }
             }
             j++
         }
+
         return -1
     }
 
@@ -183,7 +187,13 @@ if (paragraph.isNotEmpty()) {
 
         fun flush() {
             if (buf.isNotEmpty()) {
-                result.add(Segment(buf.toString(), curHighlight, curItalic))
+                result.add(
+                    Segment(
+                        buf.toString(),
+                        curHighlight,
+                        curItalic
+                    )
+                )
                 buf.setLength(0)
             }
         }
@@ -197,13 +207,18 @@ if (paragraph.isNotEmpty()) {
             buf.append(value)
         }
 
-        fun parseRange(source: String, highlight: Boolean, italic: Boolean) {
+        fun parseRange(
+            source: String,
+            highlight: Boolean,
+            italic: Boolean
+        ) {
             var i = 0
 
             while (i < source.length) {
 
                 if (source[i] == '[') {
                     val end = source.indexOf(']', i + 1)
+
                     if (end != -1) {
                         parseRange(
                             source.substring(i + 1, end),
@@ -218,11 +233,15 @@ if (paragraph.isNotEmpty()) {
                 if (source[i] == '\'') {
                     val prev = if (i > 0) source[i - 1] else null
                     val next = source.getOrNull(i + 1)
-                    val canOpen = (prev == null || !prev.isLetterOrDigit()) &&
-                        next != null && !next.isWhitespace()
+
+                    val canOpen =
+                        (prev == null || !prev.isLetterOrDigit()) &&
+                        next != null &&
+                        !next.isWhitespace()
 
                     if (canOpen) {
                         val end = findItalicEnd(source, i)
+
                         if (end != -1) {
                             parseRange(
                                 source.substring(i + 1, end),
@@ -240,7 +259,12 @@ if (paragraph.isNotEmpty()) {
             }
         }
 
-        parseRange(text, highlight = highlighted, italic = false)
+        parseRange(
+            text,
+            highlight = highlighted,
+            italic = false
+        )
+
         flush()
 
         return result
