@@ -62,13 +62,13 @@ fun InlineHighlight(
                         val bottom = lineBoxes.maxOf { it.bottom } + 3.dp.toPx()
 
                         drawRoundRect(
-                            color = Color(0xFFD5EEE9),
+                            color = Color(0xFF009494),
                             topLeft = Offset(left, top),
                             size = Size(
                                 right - left,
                                 bottom - top
                             ),
-                            cornerRadius = CornerRadius(3.dp.toPx())
+                            cornerRadius = CornerRadius(0.dp.toPx())
                         )
                     }
                 }

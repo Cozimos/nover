@@ -58,18 +58,13 @@ fun LibraryScreen(
         imported.onSuccess(onOpenNovel)
     }
 
-    Scaffold(containerColor = NovelColors.Background) { scaffoldPadding ->
-        Column(
-            modifier = Modifier.fillMaxSize().background(NovelColors.Background)
-                .padding(scaffoldPadding).padding(horizontal = 20.dp, vertical = 16.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("▤", color = MaterialTheme.colorScheme.primary,
-                style = MaterialTheme.typography.titleLarge)
-                Spacer(Modifier.width(10.dp))
-                Text("Your Library", style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.onBackground)
-            }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+        "Your Library",
+        style = MaterialTheme.typography.headlineLarge,
+        color = MaterialTheme.colorScheme.onBackground
+    )
+}
             Spacer(Modifier.height(6.dp))
             Text("Your personal reading space.", style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -80,24 +75,30 @@ fun LibraryScreen(
                     CircularProgressIndicator()
                 }
             } else if (novels.isEmpty()) {
-                Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                    text = "▤",
-                    modifier = Modifier.size(52.dp),
-                    style = MaterialTheme.typography.displayMedium,
-                    color = MaterialTheme.colorScheme.secondary
-                    )
-                    Spacer(Modifier.height(16.dp))
-                        Text("Your library is waiting", style = MaterialTheme.typography.titleLarge)
-                        Spacer(Modifier.height(6.dp))
-                        Text("Add your first novel to start reading.",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.height(22.dp))
-                        NovelFilePicker { id -> scope.launch { refreshLibrary(); onOpenNovel(id) } }
-                    }
+    Box(
+        Modifier.weight(1f).fillMaxWidth(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                "Your library is waiting",
+                style = MaterialTheme.typography.titleLarge
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "Add your first novel to start reading.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(22.dp))
+            NovelFilePicker { id ->
+                scope.launch {
+                    refreshLibrary()
+                    onOpenNovel(id)
                 }
-            } else {
+            }
+        }
+    }
+}} else {
                 LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(novels, key = { it.id }) { novel ->
                         Card(

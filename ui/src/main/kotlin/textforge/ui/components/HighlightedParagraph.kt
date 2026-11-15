@@ -1,4 +1,5 @@
 package textforge.ui.components
+
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,7 +15,6 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 
-
 @Composable
 fun HighlightedParagraph(
     text: AnnotatedString,
@@ -22,24 +22,24 @@ fun HighlightedParagraph(
     onTextLayout: (TextLayoutResult) -> Unit = {},
     onTextPositioned: (LayoutCoordinates) -> Unit = {}
 ) {
-
     Surface(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
-        color = Color(0xFFD5EEE9),
+        // Card fill, not text highlight: fills full width even on multiline
+        color = Color(0xFF009494),
         shape = RoundedCornerShape(3.dp)
     ) {
-
-    Text(
-        text = text,
-        modifier = Modifier
-            .padding(4.dp)
-            .onGloballyPositioned(onTextPositioned),
-        color = Color(0xFF252525),
-        fontSize = 17.sp,
-        lineHeight = 18.sp,
-        onTextLayout = onTextLayout
+        Text(
+            text = text,
+            modifier = Modifier
+                .padding(4.dp)
+                .onGloballyPositioned(onTextPositioned),
+            // White for contrast on #009494, old #252525 was unreadable on cyan
+            color = Color.White,
+            fontSize = 17.sp,
+            lineHeight = 18.sp,
+            onTextLayout = onTextLayout
         )
     }
 }

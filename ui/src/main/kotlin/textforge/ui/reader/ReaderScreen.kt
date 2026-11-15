@@ -593,16 +593,16 @@ fun ReaderScreen(
                         .navigationBarsPadding()
                         .padding(15.dp),
                     contentAlignment = Alignment.Center
-                ) {
-                    FilledTonalButton(
-                        onClick = { showMenu = true },
-                        shape = RoundedCornerShape(50.dp)
-                    ) {
-                        Text(
-                        text = "⌃",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface
-)
+                ) FilledTonalButton(
+    onClick = { showMenu = true },
+    shape = RoundedCornerShape(50.dp)
+) {
+    Text(
+        text = "⌃",
+        style = MaterialTheme.typography.titleLarge,
+        color = MaterialTheme.colorScheme.onSurface
+    )
+}
 
                         Spacer(Modifier.width(8.dp))
 
