@@ -14,7 +14,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 
 /** One colour for every inline highlight (reader + renderer). */
-val InlineHighlightColor = Color(0xFFD5EEE9)
+val InlineHighlightColor = Color(0xff4baccc)
 
 /**
  * Single place that styles a segment, used by both pagination and

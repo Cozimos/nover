@@ -6,21 +6,31 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
-import kotlin.math.ceil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import textforge.ui.components.appendSegment
+
+// ---------------------------------------------------------------------------
+// Tuning knobs (measurement only, they do not change how anything looks)
+// ---------------------------------------------------------------------------
+
+/** Free space kept at the bottom of every page. Raise if only the last line clips. */
+internal val ReaderBottomSafety = 16.dp
+
+/** Added to EVERY measured line. Raise (1.dp steps) if clipping grows toward the bottom. */
+internal val ReaderLineExtra = 0.dp
+
+/** Taken off the measuring width, so text wraps earlier. Raise if drawn text wraps more than measured. */
+internal val ReaderWidthTrim = 0.dp
+
 
 // ---------------------------------------------------------------------------
 // Plain data (parsed once from JSON, off the main thread)
@@ -179,7 +189,9 @@ internal fun calculateReaderPages(
     var page = mutableListOf<ReaderPageBlock>()
     var used = 0
 
-    val widthPx = key.widthPx.coerceAtLeast(1)
+    val widthPx = (key.widthPx - with(density) { ReaderWidthTrim.roundToPx() })
+        .coerceAtLeast(1)
+    val lineExtraPx = with(density) { ReaderLineExtra.roundToPx() }
     val pageHeight = key.heightPx
     val paragraphPad = with(density) { 8.dp.roundToPx() } * 2
     val headingPad = with(density) { 10.dp.roundToPx() } * 2
@@ -201,9 +213,12 @@ internal fun calculateReaderPages(
         } else {
             AnnotatedString.Builder().apply {
                 for (segment in block.segments) {
-                    for (segment in block.segments) {
-            appendSegment(segment.text, segment.italic, segment.highlighted, fullHighlight)
-                    }
+                    appendSegment(
+                        text = segment.text,
+                        italic = segment.italic,
+                        highlighted = segment.highlighted,
+                        fullHighlight = fullHighlight
+                    )
                 }
             }.toAnnotatedString()
         }
@@ -220,15 +235,46 @@ internal fun calculateReaderPages(
         )
         val lineCount = layout.lineCount
 
+        // The text that will really be drawn for lines [from..to].
+        // Trailing hard newlines are cut: drawn alone they add a blank line.
+        fun slice(from: Int, to: Int): AnnotatedString {
+            val start = layout.getLineStart(from)
+            var end = layout.getLineEnd(to)
+            while (end > start && text[end - 1] == '\n') end--
+            return text.subSequence(start, end)
+        }
+
+        // Exact height Text() will take for that fragment.
+        fun heightOf(fragment: AnnotatedString): Int {
+            val r = measurer.measure(
+                text = fragment,
+                style = key.style,
+                constraints = Constraints(maxWidth = widthPx)
+            )
+            return r.size.height + r.lineCount * lineExtraPx
+        }
+
         var line = 0
         while (line < lineCount) {
-            val room = (pageHeight - used - pad).toFloat()
+            val room = pageHeight - used - pad
             val top = layout.getLineTop(line)
 
+            // Estimate from the whole-block layout...
             var last = line - 1
             while (last + 1 < lineCount &&
-                layout.getLineBottom(last + 1) - top <= room
+                layout.getLineBottom(last + 1) - top +
+                (last + 2 - line) * lineExtraPx <= room.toFloat()
             ) last++
+
+            // ...then verify with the exact fragment and shrink until it fits.
+            var fragment = AnnotatedString("")
+            var h = 0
+            while (last >= line) {
+                fragment = slice(line, last)
+                h = heightOf(fragment)
+                if (h <= room) break
+                last--
+            }
 
             if (last < line) {
                 if (page.isNotEmpty()) {
@@ -236,20 +282,19 @@ internal fun calculateReaderPages(
                     continue
                 }
                 last = line // empty page, still too small: force one line
+                fragment = slice(line, last)
+                h = heightOf(fragment)
             }
 
             page.add(
                 ReaderPageBlock(
-                    text = text.subSequence(
-                        layout.getLineStart(line),
-                        layout.getLineEnd(last)
-                    ),
+                    text = fragment,
                     heading = heading,
                     fullHighlight = fullHighlight
                 )
             )
 
-            used += ceil(layout.getLineBottom(last) - top).toInt() + pad
+            used += h + pad
             line = last + 1
 
             if (line < lineCount) finishPage()
