@@ -135,17 +135,17 @@ object NovelMarkdownParser {
                 i++
             }
 
-                if (paragraph.isNotEmpty()) {
-                blocks.add(
-                NovelBlock.Paragraph(
-                segments = parseSegments(
+            if (paragraph.isNotEmpty()) {
+    blocks.add(
+        NovelBlock.Paragraph(
+            segments = parseSegments(
                 paragraph.joinToString("\n")
-                ),
-                fullHighlight = false}
-                    )
-                )
-            }
-        }
+            ),
+            fullHighlight = false
+            )
+        )
+    }
+}        
 
         return NovelDocument(
             blocks = blocks,
