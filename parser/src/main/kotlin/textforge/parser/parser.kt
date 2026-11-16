@@ -135,15 +135,13 @@ object NovelMarkdownParser {
                 i++
             }
 
-            if (paragraph.isNotEmpty()) {
-                val segments = parseSegments(
-                    paragraph.joinToString("\n")
-                )
-
+                if (paragraph.isNotEmpty()) {
                 blocks.add(
-                    NovelBlock.Paragraph(
-                        segments = segments,
-                        fullHighlight = segments.any { it.highlighted }
+                NovelBlock.Paragraph(
+                segments = parseSegments(
+                paragraph.joinToString("\n")
+                ),
+                fullHighlight = false}
                     )
                 )
             }

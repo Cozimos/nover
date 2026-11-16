@@ -55,7 +55,7 @@ fun NovelTextRenderer(
             } else {
                 InlineHighlight(
                     text = annotatedText,
-                    modifier = modifier.padding(vertical = 9.dp)
+                    modifier = modifier.padding(vertical = 2.dp)
                 )
             }
         }
