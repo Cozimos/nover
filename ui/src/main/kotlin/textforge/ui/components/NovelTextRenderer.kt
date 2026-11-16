@@ -34,6 +34,7 @@ fun NovelTextRenderer(
                         addStyle(
                             SpanStyle(
                                 background = if (
+<<<<<<< HEAD
                                     segment.highlighted &&
                                     !block.fullHighlight
                                 ) {
@@ -41,6 +42,11 @@ fun NovelTextRenderer(
                                 } else {
                                     Color.Transparent
                                 },
+=======
+                                    segment.highlighted && !block.fullHighlight
+                                ) Color(0xFF818890)
+                                else Color.Transparent,
+>>>>>>> d805af2bd4f66bdf53f6fdf0c5a869ae5d45bcc3
                                 fontStyle = if (segment.italic) {
                                     FontStyle.Italic
                                 } else {
