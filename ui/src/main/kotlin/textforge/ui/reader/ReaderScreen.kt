@@ -555,7 +555,7 @@ fun ReaderScreen(
                     val end = minOf(start + tocPageSize, chapters.size)
 
                     LazyColumn(
-                        modifier = Modifier.heightIn(max = 1000.dp)
+                        modifier = Modifier.heightIn(max = 888.dp)
                     ) {
                         itemsIndexed(chapters.subList(start, end)) { index, chapter ->
                             val chapterIndex = start + index
@@ -569,7 +569,7 @@ fun ReaderScreen(
                                     .fillMaxWidth()
                                     .height(48.dp),
                                 contentPadding = PaddingValues(
-                                    horizontal = 8.dp,
+                                    horizontal = 5.dp,
                                     vertical = 0.dp
                                 )
                             ) {

@@ -30,9 +30,12 @@ fun DictionaryHtmlView(
         <head>
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <style>
-            body {
+            * {
+              box-sizing: border-box;
+            }
+            html, body {
               margin: 0;
-              padding: 10px 12px;
+              padding: 0;
               background: $bg;
               color: $text;
               font-family: sans-serif;
@@ -41,41 +44,40 @@ fun DictionaryHtmlView(
               overflow-wrap: anywhere;
             }
 
-            h1, h2, h3 { margin: 10px 0 4px; line-height: 1.25; }
+            h1, h2, h3 { margin: 8px 0 4px; padding: 0; line-height: 1.25; }
             h1 { font-size: 19px; }
             h2 { font-size: 17px; }
             h3 { font-size: 15.5px; }
             h1:first-child, h2:first-child, h3:first-child { margin-top: 0; }
 
-            p { margin: 0 0 6px; }
+            p { margin: 0 0 6px; padding: 0; }
 
-            ul, ol { margin: 0 0 6px; padding-left: 18px; }
-            li { margin: 2px 0; }
+            ul, ol { margin: 0 0 6px; padding-left: 14px; }
+            li { margin: 2px 0; padding: 0; }
             li::marker { color: $muted; }
 
             blockquote {
-              margin: 8px 0;
-              padding: 7px 10px;
-              border-left: 3px solid $quoteBorder;
+              margin: 6px 0;
+              padding: 4px 6px;
+              border-left: 2px solid $quoteBorder;
               background: $quoteBg;
-              border-radius: 0 8px 8px 0;
             }
             blockquote p:last-child { margin-bottom: 0; }
 
             a { color: $link; }
 
-            img { max-width: 100%; height: auto; display: block; margin: 6px 0; }
+            img { max-width: 100%; height: auto; display: block; margin: 4px 0; padding: 0; }
 
-            table { width: 100%; border-collapse: collapse; margin: 6px 0 8px; font-size: 13.5px; }
-            th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid $line; }
+            table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 13.5px; }
+            th, td { text-align: left; padding: 4px 2px; border-bottom: 1px solid $line; }
             th { background: $quoteBg; }
             tr:last-child td { border-bottom: none; }
 
-            code { font-size: 13px; background: $quoteBg; padding: 1px 5px; border-radius: 5px; }
-            pre { background: $quoteBg; padding: 8px 10px; border-radius: 8px; overflow-x: auto; font-size: 13px; line-height: 1.4; }
+            code { font-size: 13px; background: $quoteBg; padding: 0 3px; border-radius: 3px; }
+            pre { margin: 6px 0; background: $quoteBg; padding: 4px; overflow-x: auto; font-size: 13px; line-height: 1.4; }
             pre code { background: transparent; padding: 0; }
 
-            hr { border: none; border-top: 1px solid $line; margin: 10px 0; }
+            hr { border: none; border-top: 1px solid $line; margin: 8px 0; padding: 0; }
           </style>
         </head>
         <body>$html</body>
