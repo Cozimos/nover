@@ -124,7 +124,7 @@ fun ReaderScreen(
     var searchText by remember { mutableStateOf("") }
     var replaceText by remember { mutableStateOf("") }
 
-    val tocPageSize = 12
+    val tocPageSize = 13
 
     var tocPage by remember(novelId) {
         mutableIntStateOf(0)
@@ -177,7 +177,7 @@ fun ReaderScreen(
             )
 
             // Must match the Column padding below exactly.
-            val pagePad = 4.dp
+            val pagePad = 7.dp
 
             val widthPx = with(density) {
                 (maxWidth - pagePad * 2).roundToPx()
@@ -272,7 +272,7 @@ fun ReaderScreen(
                         detectTapGestures(
                             onTap = { offset ->
                                 when {
-                                    offset.x < size.width * 0.35f -> {
+                                    offset.x < size.width * 0.40f -> {
                                         if (currentPage > 0) {
                                             currentPage--
                                         } else if (currentChapter > 0) {
@@ -280,7 +280,7 @@ fun ReaderScreen(
                                         }
                                     }
 
-                                    offset.x > size.width * 0.75f -> {
+                                    offset.x > size.width * 0.80f -> {
                                         if (currentPage < pages.lastIndex) {
                                             currentPage++
                                         } else if (currentChapter < lastChapter) {
@@ -541,7 +541,7 @@ fun ReaderScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 3.dp)
+                        .padding(horizontal = 18.dp, vertical = 3.dp)
                 ) {
                     Text(
                         "Table of Contents",
@@ -555,7 +555,7 @@ fun ReaderScreen(
                     val end = minOf(start + tocPageSize, chapters.size)
 
                     LazyColumn(
-                        modifier = Modifier.heightIn(max = 750.dp)
+                        modifier = Modifier.heightIn(max = 880.dp)
                     ) {
                         itemsIndexed(chapters.subList(start, end)) { index, chapter ->
                             val chapterIndex = start + index
