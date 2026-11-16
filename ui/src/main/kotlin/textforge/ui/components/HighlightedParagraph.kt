@@ -38,11 +38,11 @@ fun HighlightedParagraph(
         Text(
             text = text,
             modifier = Modifier
-                .padding(horizontal = 9.dp, vertical = 6.dp)
+                .padding(horizontal = 2.dp, vertical = 2.dp)
                 .onGloballyPositioned(onTextPositioned),
             color = Color(0xFF171A1D),
             fontSize = 17.sp,
-            lineHeight = 24.sp,
+            lineHeight = 17.sp,
             onTextLayout = onTextLayout
         )
     }

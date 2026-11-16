@@ -173,11 +173,11 @@ fun ReaderScreen(
 
             val pageTextStyle = MaterialTheme.typography.bodyLarge.copy(
                 fontSize = 17.sp,
-                lineHeight = 18.sp
+                lineHeight = 17.sp
             )
 
             // Must match the Column padding below exactly.
-            val pagePad = 10.dp
+            val pagePad = 1.dp
 
             val widthPx = with(density) {
                 (maxWidth - pagePad * 2).roundToPx()
