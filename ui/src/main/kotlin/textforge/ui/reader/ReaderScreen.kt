@@ -177,7 +177,7 @@ fun ReaderScreen(
             )
 
             // Must match the Column padding below exactly.
-            val pagePad = 1.dp
+            val pagePad = 2.dp
 
             val widthPx = with(density) {
                 (maxWidth - pagePad * 2).roundToPx()
@@ -555,7 +555,7 @@ fun ReaderScreen(
                     val end = minOf(start + tocPageSize, chapters.size)
 
                     LazyColumn(
-                        modifier = Modifier.heightIn(max = 888.dp)
+                        modifier = Modifier.heightIn(max = 750.dp)
                     ) {
                         itemsIndexed(chapters.subList(start, end)) { index, chapter ->
                             val chapterIndex = start + index
@@ -570,7 +570,7 @@ fun ReaderScreen(
                                     .height(48.dp),
                                 contentPadding = PaddingValues(
                                     horizontal = 5.dp,
-                                    vertical = 0.dp
+                                    vertical = 1.dp
                                 )
                             ) {
                                 Text(
