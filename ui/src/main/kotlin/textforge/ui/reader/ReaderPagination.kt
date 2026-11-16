@@ -20,6 +20,7 @@ import kotlin.math.ceil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
+import textforge.ui.components.appendSegment
 
 // ---------------------------------------------------------------------------
 // Plain data (parsed once from JSON, off the main thread)
@@ -200,22 +201,9 @@ internal fun calculateReaderPages(
         } else {
             AnnotatedString.Builder().apply {
                 for (segment in block.segments) {
-                    pushStyle(
-                        SpanStyle(
-                            fontStyle = if (segment.italic) {
-                                FontStyle.Italic
-                            } else {
-                                FontStyle.Normal
-                            },
-                            background = if (segment.highlighted && !fullHighlight) {
-                                Color(0xFFD5EEE9)
-                            } else {
-                                Color.Transparent
-                            }
-                        )
-                    )
-                    append(segment.text)
-                    pop()
+                    for (segment in block.segments) {
+            appendSegment(segment.text, segment.italic, segment.highlighted, fullHighlight)
+                    }
                 }
             }.toAnnotatedString()
         }

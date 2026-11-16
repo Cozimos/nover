@@ -478,12 +478,12 @@ fun ReaderScreen(
                             )
                         }
 
-                        else -> {
-                            textforge.ui.components.InlineHighlight(
-                                text = pageBlock.text,
-                                modifier = Modifier.padding(vertical = 8.dp),
-                                onTextLayout = onLayout,
-                                onTextPositioned = onPositioned
+                        textforge.ui.components.InlineHighlight(
+                        text = pageBlock.text,
+                        style = pageTextStyle,
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        onTextLayout = onLayout,
+                        onTextPositioned = onPositioned
                             )
                         }
                     }

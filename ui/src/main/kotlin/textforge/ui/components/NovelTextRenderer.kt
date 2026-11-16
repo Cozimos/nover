@@ -3,10 +3,7 @@ package textforge.ui.components
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import textforge.parser.NovelBlock
 
@@ -22,28 +19,17 @@ fun NovelTextRenderer(
                 level = block.level
             )
         }
+
         is NovelBlock.Paragraph -> {
+            // Same styling function the paginator uses.
             val annotatedText = buildAnnotatedString {
                 block.segments.forEach { segment ->
-                    val start = length
-                    append(segment.text)
-                    val end = length
-                    if (segment.highlighted || segment.italic) {
-                        addStyle(
-                            SpanStyle(
-                                background = if (
-                                    segment.highlighted &&
-                                    !block.fullHighlight
-                                ) Color(0xFF009494)
-                                else Color.Transparent,
-                                fontStyle = if (segment.italic)
-                                    FontStyle.Italic
-                                else FontStyle.Normal
-                            ),
-                            start,
-                            end
-                        )
-                    }
+                    appendSegment(
+                        text = segment.text,
+                        italic = segment.italic,
+                        highlighted = segment.highlighted,
+                        fullHighlight = block.fullHighlight
+                    )
                 }
             }
 
@@ -55,7 +41,7 @@ fun NovelTextRenderer(
             } else {
                 InlineHighlight(
                     text = annotatedText,
-                    modifier = modifier.padding(vertical = 2.dp)
+                    modifier = modifier.padding(vertical = 8.dp)
                 )
             }
         }

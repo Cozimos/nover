@@ -31,6 +31,8 @@ data class Segment(
 
 object NovelMarkdownParser {
 
+    private val HEADING = Regex("^(#{1,6})\\s+(.+)$")
+
     fun parse(markdown: String): NovelDocument {
 
         val blocks = mutableListOf<NovelBlock>()
@@ -45,8 +47,7 @@ object NovelMarkdownParser {
 
         while (i < lines.size) {
 
-            val line = lines[i]
-            val trimmed = line.trim()
+            val trimmed = lines[i].trim()
 
             // Skip empty lines
             if (trimmed.isEmpty()) {
@@ -55,36 +56,21 @@ object NovelMarkdownParser {
             }
 
             // Heading
-            val heading = Regex(
-                "^(#{1,6})\\s+(.+)$"
-            ).matchEntire(trimmed)
+            val heading = HEADING.matchEntire(trimmed)
 
             if (heading != null) {
-
                 val level = heading.groupValues[1].length
                 val title = heading.groupValues[2].trim()
-
                 val index = blocks.size
 
-                blocks.add(
-                    NovelBlock.Heading(
-                        level = level,
-                        title = title
-                    )
-                )
-
-                toc.add(
-                    TocEntry(
-                        title = title,
-                        blockIndex = index
-                    )
-                )
+                blocks.add(NovelBlock.Heading(level = level, title = title))
+                toc.add(TocEntry(title = title, blockIndex = index))
 
                 i++
                 continue
             }
 
-            // Multiline block highlight
+            // Explicit multiline card: "[" alone on a line ... "]" alone on a line
             if (trimmed == "[") {
 
                 i++
@@ -114,7 +100,7 @@ object NovelMarkdownParser {
                 continue
             }
 
-            // Normal paragraph
+            // Normal paragraph (until blank line, heading or lone "[")
             val paragraph = mutableListOf<String>()
 
             while (i < lines.size) {
@@ -124,10 +110,7 @@ object NovelMarkdownParser {
 
                 val currentTrimmed = current.trim()
 
-                if (
-                    currentTrimmed == "[" ||
-                    Regex("^#{1,6}\\s+.+$").matches(currentTrimmed)
-                ) {
+                if (currentTrimmed == "[" || HEADING.matches(currentTrimmed)) {
                     break
                 }
 
@@ -136,16 +119,28 @@ object NovelMarkdownParser {
             }
 
             if (paragraph.isNotEmpty()) {
-                val segments = parseSegments(
-                    paragraph.joinToString("\n")
-                )
+                val joined = paragraph.joinToString("\n").trim()
 
-                blocks.add(
-                    NovelBlock.Paragraph(
-                        segments = segments,
-                        fullHighlight = segments.any { it.highlighted }
+                if (isWholeBracket(joined)) {
+                    // The whole paragraph is one [ ... ] group -> card
+                    blocks.add(
+                        NovelBlock.Paragraph(
+                            segments = parseSegments(
+                                joined.substring(1, joined.length - 1).trim(),
+                                highlighted = true
+                            ),
+                            fullHighlight = true
+                        )
                     )
-                )
+                } else {
+                    // Brackets inside a sentence -> inline highlight only
+                    blocks.add(
+                        NovelBlock.Paragraph(
+                            segments = parseSegments(joined),
+                            fullHighlight = false
+                        )
+                    )
+                }
             }
         }
 
@@ -154,6 +149,13 @@ object NovelMarkdownParser {
             toc = toc
         )
     }
+
+    /** True only when one single [ ... ] group spans the entire paragraph. */
+    private fun isWholeBracket(s: String): Boolean =
+        s.length > 2 &&
+            s.first() == '[' &&
+            s.last() == ']' &&
+            s.indexOf(']') == s.length - 1
 
     private fun findItalicEnd(source: String, open: Int): Int {
         var j = open + 2
@@ -236,8 +238,8 @@ object NovelMarkdownParser {
 
                     val canOpen =
                         (prev == null || !prev.isLetterOrDigit()) &&
-                        next != null &&
-                        !next.isWhitespace()
+                            next != null &&
+                            !next.isWhitespace()
 
                     if (canOpen) {
                         val end = findItalicEnd(source, i)
