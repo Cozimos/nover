@@ -124,7 +124,7 @@ fun ReaderScreen(
     var searchText by remember { mutableStateOf("") }
     var replaceText by remember { mutableStateOf("") }
 
-    val tocPageSize = 15
+    val tocPageSize = 12
 
     var tocPage by remember(novelId) {
         mutableIntStateOf(0)
@@ -177,7 +177,7 @@ fun ReaderScreen(
             )
 
             // Must match the Column padding below exactly.
-            val pagePad = 2.dp
+            val pagePad = 4.dp
 
             val widthPx = with(density) {
                 (maxWidth - pagePad * 2).roundToPx()
@@ -567,7 +567,7 @@ fun ReaderScreen(
                                 },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(48.dp),
+                                    .height(30.dp),
                                 contentPadding = PaddingValues(
                                     horizontal = 5.dp,
                                     vertical = 1.dp
