@@ -31,6 +31,12 @@ internal val ReaderLineExtra = 0.dp
 /** Taken off the measuring width, so text wraps earlier. Raise if drawn text wraps more than measured. */
 internal val ReaderWidthTrim = 0.dp
 
+/** Space a card adds around its text (top + bottom) on EVERY page it appears on. */
+internal val ReaderCardSpaceV = 16.dp
+
+/** Width a card takes away from its text (left + right). */
+internal val ReaderCardSpaceH = 0.dp
+
 
 // ---------------------------------------------------------------------------
 // Plain data (parsed once from JSON, off the main thread)
@@ -195,6 +201,9 @@ internal fun calculateReaderPages(
     val pageHeight = key.heightPx
     val paragraphPad = with(density) { 8.dp.roundToPx() } * 2
     val headingPad = with(density) { 10.dp.roundToPx() } * 2
+    val cardPad = with(density) { ReaderCardSpaceV.roundToPx() }
+    val cardWidth = (widthPx - with(density) { ReaderCardSpaceH.roundToPx() })
+        .coerceAtLeast(1)
 
     fun finishPage() {
         if (page.isNotEmpty()) {
@@ -225,13 +234,20 @@ internal fun calculateReaderPages(
 
         if (text.isEmpty()) continue
 
-        val pad = if (heading) headingPad else paragraphPad
+        // A card pays its own space on every page it appears on:
+        // each fragment of a split card gets it again on the next page.
+        val pad = when {
+            heading -> headingPad
+            fullHighlight -> cardPad
+            else -> paragraphPad
+        }
+        val blockWidth = if (fullHighlight) cardWidth else widthPx
 
         // Measure the whole block once, then cut it on line boundaries.
         val layout = measurer.measure(
             text = text,
             style = key.style,
-            constraints = Constraints(maxWidth = widthPx)
+            constraints = Constraints(maxWidth = blockWidth)
         )
         val lineCount = layout.lineCount
 
@@ -249,7 +265,7 @@ internal fun calculateReaderPages(
             val r = measurer.measure(
                 text = fragment,
                 style = key.style,
-                constraints = Constraints(maxWidth = widthPx)
+                constraints = Constraints(maxWidth = blockWidth)
             )
             return r.size.height + r.lineCount * lineExtraPx
         }
