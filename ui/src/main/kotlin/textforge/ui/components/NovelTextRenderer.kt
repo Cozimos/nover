@@ -22,36 +22,23 @@ fun NovelTextRenderer(
                 level = block.level
             )
         }
-
         is NovelBlock.Paragraph -> {
             val annotatedText = buildAnnotatedString {
                 block.segments.forEach { segment ->
                     val start = length
                     append(segment.text)
                     val end = length
-
                     if (segment.highlighted || segment.italic) {
                         addStyle(
                             SpanStyle(
                                 background = if (
-<<<<<<< HEAD
                                     segment.highlighted &&
                                     !block.fullHighlight
-                                ) {
-                                    Color(0xFF818890)
-                                } else {
-                                    Color.Transparent
-                                },
-=======
-                                    segment.highlighted && !block.fullHighlight
-                                ) Color(0xFF818890)
+                                ) Color(0xFF009494)
                                 else Color.Transparent,
->>>>>>> d805af2bd4f66bdf53f6fdf0c5a869ae5d45bcc3
-                                fontStyle = if (segment.italic) {
+                                fontStyle = if (segment.italic)
                                     FontStyle.Italic
-                                } else {
-                                    FontStyle.Normal
-                                }
+                                else FontStyle.Normal
                             ),
                             start,
                             end
