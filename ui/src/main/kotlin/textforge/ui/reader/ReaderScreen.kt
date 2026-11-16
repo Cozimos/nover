@@ -1,19 +1,15 @@
 package textforge.ui.reader
 
 import android.app.Activity
-import android.net.Uri
-import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,7 +21,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -40,11 +35,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import textforge.parser.ChapterIndex
 import textforge.storage.NovelStore
-import textforge.storage.ReadingProgress
 import textforge.ui.NovelColors
-import textforge.ui.dictionary.StarDictManager
-import textforge.ui.components.DictionaryHtmlView
-import androidx.compose.foundation.clickable
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -82,46 +73,34 @@ fun ReaderScreen(
         mutableStateOf<List<ChapterIndex>>(emptyList())
     }
 
+    LaunchedEffect(novelId) {
+        chapters = withContext(Dispatchers.IO) {
+            NovelStore.getChapters(context, novelId)
+        }
+    }
+
+    val lastChapter = (chapters.size - 1).coerceAtLeast(0)
+
     var currentChapter by remember(novelId) {
         mutableIntStateOf(0)
+    }
+
+    LaunchedEffect(novelId, chapters) {
+        if (chapters.isNotEmpty()) {
+            val progress = withContext(Dispatchers.IO) {
+                NovelStore.getProgress(context, novelId)
+            }
+
+            currentChapter = progress.chapterNumber.coerceIn(
+                0,
+                chapters.lastIndex
+            )
+        }
     }
 
     var currentPage by remember(novelId) {
         mutableIntStateOf(0)
     }
-
-    // Do not load/prefetch chapters or write progress until the saved
-    // reading position has been restored.
-    var progressLoaded by remember(novelId) {
-        mutableStateOf(false)
-    }
-
-    LaunchedEffect(novelId) {
-        val (loadedChapters, savedProgress) = withContext(Dispatchers.IO) {
-            val loaded = NovelStore.getChapters(context, novelId)
-            val progress = NovelStore.getProgress(context, novelId)
-            loaded to progress
-        }
-
-        chapters = loadedChapters
-        if (loadedChapters.isNotEmpty()) {
-            val chapterFromOffset = loadedChapters.indexOfFirst { chapter ->
-                savedProgress.byteOffset >= chapter.startByte &&
-                    savedProgress.byteOffset < chapter.endByte
-            }
-            currentChapter = (if (chapterFromOffset >= 0) chapterFromOffset
-                else savedProgress.chapterNumber).coerceIn(0, loadedChapters.lastIndex)
-            currentPage = savedProgress.pageIndex.coerceAtLeast(0)
-        } else {
-            currentChapter = 0
-            currentPage = 0
-        }
-        progressLoaded = true
-    }
-
-    val lastChapter = (chapters.size - 1).coerceAtLeast(0)
-
-    BackHandler { onBack() }
 
     var showBars by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
@@ -129,68 +108,6 @@ fun ReaderScreen(
     var showSearch by remember { mutableStateOf(false) }
     var showReplace by remember { mutableStateOf(false) }
     var selectedWord by remember { mutableStateOf<String?>(null) }
-    var dictionaryName by remember { mutableStateOf(StarDictManager.installedName(context)) }
-    var dictionaryDefinition by remember { mutableStateOf<String?>(null) }
-    var dictionaryMatchType by remember { mutableStateOf(StarDictManager.MatchType.NONE) }
-    var dictionarySuggestions by remember { mutableStateOf<List<String>>(emptyList()) }
-    var dictionaryLoading by remember { mutableStateOf(false) }
-    var dictionaryMessage by remember { mutableStateOf<String?>(null) }
-    var folderToInstall by remember { mutableStateOf<Uri?>(null) }
-
-    val dictionaryFolderPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocumentTree()
-    ) { uri ->
-        if (uri != null) {
-            try {
-                context.contentResolver.takePersistableUriPermission(
-                    uri,
-                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
-                )
-            } catch (_: SecurityException) {
-                // The import is copied into app-private storage immediately.
-            }
-            folderToInstall = uri
-        }
-    }
-
-    LaunchedEffect(folderToInstall) {
-        val uri = folderToInstall ?: return@LaunchedEffect
-        dictionaryMessage = null
-        dictionaryDefinition = null
-        try {
-            val name = withContext(Dispatchers.IO) {
-                StarDictManager.installFromFolder(context, uri)
-            }
-            dictionaryName = name
-            dictionaryMessage = "Dictionary installed: $name"
-        } catch (error: Exception) {
-            dictionaryMessage = error.message ?: "Could not install this dictionary."
-        } finally {
-            folderToInstall = null
-        }
-    }
-
-    LaunchedEffect(selectedWord, dictionaryName) {
-        val word = selectedWord ?: return@LaunchedEffect
-        dictionaryDefinition = null
-        dictionarySuggestions = emptyList()
-        dictionaryMatchType = StarDictManager.MatchType.NONE
-        if (dictionaryName == null) return@LaunchedEffect
-        dictionaryLoading = true
-        dictionaryMessage = null
-        try {
-            val result = withContext(Dispatchers.IO) {
-                StarDictManager.lookupSmart(context, word)
-            }
-            dictionaryDefinition = result.entry?.definition
-            dictionaryMatchType = result.matchedBy
-            dictionarySuggestions = result.suggestions
-        } catch (error: Exception) {
-            dictionaryMessage = error.message ?: "Dictionary lookup failed."
-        } finally {
-            dictionaryLoading = false
-        }
-    }
 
     val textLayouts = remember(currentChapter, currentPage) {
         mutableStateMapOf<Int, TextLayoutResult>()
@@ -207,7 +124,7 @@ fun ReaderScreen(
     var searchText by remember { mutableStateOf("") }
     var replaceText by remember { mutableStateOf("") }
 
-    val tocPageSize = 13
+    val tocPageSize = 15
 
     var tocPage by remember(novelId) {
         mutableIntStateOf(0)
@@ -231,9 +148,7 @@ fun ReaderScreen(
         }
     }
 
-    LaunchedEffect(novelId, currentChapter, chapters.size, progressLoaded) {
-        if (!progressLoaded || chapters.isEmpty()) return@LaunchedEffect
-
+    LaunchedEffect(novelId, currentChapter, chapters.size) {
         withContext(Dispatchers.IO) {
             NovelStore.updateChapterWindow(
                 context = context,
@@ -241,23 +156,6 @@ fun ReaderScreen(
                 current = currentChapter,
                 chapterCount = chapters.size
             )
-        }
-    }
-
-    // Persist chapter + page after restoration, and on every position change.
-    LaunchedEffect(novelId, currentChapter, currentPage, progressLoaded, chapters) {
-        if (!progressLoaded || chapters.isEmpty()) return@LaunchedEffect
-
-        val chapterIndex = currentChapter.coerceIn(0, chapters.lastIndex)
-        val progress = ReadingProgress(
-            chapterNumber = chapterIndex,
-            blockIndex = 0,
-            byteOffset = chapters[chapterIndex].startByte,
-            pageIndex = currentPage.coerceAtLeast(0)
-        )
-
-        withContext(Dispatchers.IO) {
-            NovelStore.saveProgress(context, novelId, progress)
         }
     }
 
@@ -308,9 +206,7 @@ fun ReaderScreen(
             val prefetchMeasurer = rememberTextMeasurer()
 
             // Prefetch neighbouring chapters off the main thread.
-            LaunchedEffect(novelId, currentChapter, chapters.size, layoutKey, progressLoaded) {
-                if (!progressLoaded || chapters.isEmpty()) return@LaunchedEffect
-
+            LaunchedEffect(novelId, currentChapter, chapters.size, layoutKey) {
                 val window = withContext(Dispatchers.IO) {
                     NovelStore.getChapterWindowCache(
                         context = context,
@@ -346,26 +242,22 @@ fun ReaderScreen(
                 }
             }
 
-            val pages = if (progressLoaded && chapters.isNotEmpty()) {
-                rememberReaderPages(
-                    chapter = currentChapter,
-                    cache = paginationCache,
-                    load = {
-                        withContext(Dispatchers.IO) {
-                            NovelStore
-                                .getChapterCache(context, novelId, currentChapter)
-                                .toBlocks()
-                        }
-                    },
-                    key = layoutKey,
-                    density = density
-                )
-            } else {
-                emptyList()
-            }
+            val pages = rememberReaderPages(
+                chapter = currentChapter,
+                cache = paginationCache,
+                load = {
+                    withContext(Dispatchers.IO) {
+                        NovelStore
+                            .getChapterCache(context, novelId, currentChapter)
+                            .toBlocks()
+                    }
+                },
+                key = layoutKey,
+                density = density
+            )
 
-            LaunchedEffect(currentChapter, pages.size, progressLoaded) {
-                if (progressLoaded && pages.isNotEmpty()) {
+            LaunchedEffect(currentChapter, pages.size) {
+                if (pages.isNotEmpty()) {
                     currentPage = currentPage.coerceIn(0, pages.lastIndex)
                 }
             }
@@ -478,12 +370,13 @@ fun ReaderScreen(
                             )
                         }
 
-                        textforge.ui.components.InlineHighlight(
-                        text = pageBlock.text,
-                        style = pageTextStyle,
-                        modifier = Modifier.padding(vertical = 8.dp),
-                        onTextLayout = onLayout,
-                        onTextPositioned = onPositioned
+                        else -> {
+                            textforge.ui.components.InlineHighlight(
+                                text = pageBlock.text,
+                                style = pageTextStyle,
+                                modifier = Modifier.padding(vertical = 8.dp),
+                                onTextLayout = onLayout,
+                                onTextPositioned = onPositioned
                             )
                         }
                     }
@@ -495,51 +388,7 @@ fun ReaderScreen(
             AlertDialog(
                 onDismissRequest = { selectedWord = null },
                 title = { Text(word) },
-                text = {
-                    Column(
-                        modifier = Modifier.verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        when {
-                            dictionaryName == null -> {
-                                Text("No dictionary installed yet.")
-                                Text("Choose the folder containing exactly one StarDict dictionary: its matching .ifo, .idx and .dict or .dict.dz files. Select the dictionary's own folder, not KOReader's parent dict folder.")
-                                if (dictionaryMessage != null) {
-                                    Text(dictionaryMessage!!, color = MaterialTheme.colorScheme.error)
-                                }
-                                TextButton(onClick = { dictionaryFolderPicker.launch(null) }) {
-                                    Text("Choose dictionary folder")
-                                }
-                            }
-                            dictionaryLoading -> Text("Looking up…")
-                            dictionaryDefinition != null -> {
-                                if (dictionaryMatchType == StarDictManager.MatchType.SYNONYM) {
-                                    Text("Synonym entry", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
-                                }
-                                DictionaryHtmlView(
-                                    html = dictionaryDefinition!!,
-                                    modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp, max = 520.dp),
-                                    isDarkTheme = isSystemInDarkTheme()
-                                )
-                            }
-                            dictionaryMessage != null -> Text(dictionaryMessage!!, color = MaterialTheme.colorScheme.error)
-                            dictionarySuggestions.isNotEmpty() -> {
-                                Text("No exact match. Similar headwords:", style = MaterialTheme.typography.bodyMedium)
-                                dictionarySuggestions.forEach { suggestion ->
-                                    TextButton(onClick = { selectedWord = suggestion }) {
-                                        Text(suggestion)
-                                    }
-                                }
-                            }
-                            else -> Text("No entry found in $dictionaryName.")
-                        }
-                        if (dictionaryName != null) {
-                            TextButton(onClick = { dictionaryFolderPicker.launch(null) }) {
-                                Text("Change dictionary")
-                            }
-                        }
-                    }
-                },
+                text = { Text("Dictionary lookup") },
                 confirmButton = {
                     TextButton(onClick = { selectedWord = null }) {
                         Text("Close")
@@ -559,17 +408,12 @@ fun ReaderScreen(
             ) {
                 Row(
                     modifier = Modifier
-                    .statusBarsPadding()
-                    .padding(horizontal = 8.dp),
+                        .statusBarsPadding()
+                        .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                                        IconButton(onClick = onBack) {
-                        Text(
-                    text = "‹",
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                        )
+                    TextButton(onClick = onBack) {
+                        Text("← Library")
                     }
 
                     Spacer(Modifier.weight(1f))
@@ -579,7 +423,7 @@ fun ReaderScreen(
             }
         }
 
-                // BOTTOM READER BAR
+        // BOTTOM READER BAR
         AnimatedVisibility(
             visible = showBars,
             modifier = Modifier.align(Alignment.BottomCenter)
@@ -588,24 +432,30 @@ fun ReaderScreen(
                 color = NovelColors.MenuBackground,
                 modifier = Modifier.fillMaxWidth()
             ) {
-            Row(
-                 modifier = Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(15.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(15.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-    text = "Reader Menu",
-    modifier = Modifier.clickable {
-        showMenu = true
-    },
-    color = MaterialTheme.colorScheme.onSurface
-)
+                    FilledTonalButton(
+                        onClick = { showMenu = true },
+                        shape = RoundedCornerShape(50.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.KeyboardArrowUp,
+                            contentDescription = "Reader menu"
+                        )
+
+                        Spacer(Modifier.width(8.dp))
+
+                        Text("Reader Menu")
+                    }
                 }
             }
         }
+    }
 
     // READER MENU
     if (showMenu) {
@@ -705,7 +555,7 @@ fun ReaderScreen(
                     val end = minOf(start + tocPageSize, chapters.size)
 
                     LazyColumn(
-                        modifier = Modifier.heightIn(max = 888.dp)
+                        modifier = Modifier.heightIn(max = 1000.dp)
                     ) {
                         itemsIndexed(chapters.subList(start, end)) { index, chapter ->
                             val chapterIndex = start + index
@@ -717,9 +567,9 @@ fun ReaderScreen(
                                 },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(45.dp),
+                                    .height(48.dp),
                                 contentPadding = PaddingValues(
-                                    horizontal = 7.dp,
+                                    horizontal = 8.dp,
                                     vertical = 0.dp
                                 )
                             ) {
@@ -837,6 +687,5 @@ fun ReaderScreen(
                 }
             }
         )
-    }
     }
 }
