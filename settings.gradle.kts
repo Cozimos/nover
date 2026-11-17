@@ -18,8 +18,6 @@ rootProject.name = "TextForge"
 
 include(
     ":app",
-    ":integrations",
-    ":navigation",
     ":parser",
     ":storage",
     ":ui"

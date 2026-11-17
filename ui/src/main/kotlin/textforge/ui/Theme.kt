@@ -1,6 +1,6 @@
 package textforge.ui
-
 import androidx.compose.material3.Typography
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -30,4 +30,10 @@ val AppTypography = Typography().run {
         labelMedium = labelMedium.copy(fontFamily = AtkinsonFont),
         labelSmall = labelSmall.copy(fontFamily = AtkinsonFont)
     )
+}
+
+
+object NovelColors {
+    val Background = Color(0xFFA39D8C)
+    val MenuBackground = Color(0xFF8F8F7F)
 }

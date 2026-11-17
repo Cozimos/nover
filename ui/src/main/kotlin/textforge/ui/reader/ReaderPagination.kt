@@ -15,7 +15,6 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
 import textforge.ui.components.appendSegment
 
 // ---------------------------------------------------------------------------
@@ -39,52 +38,24 @@ internal val ReaderCardSpaceH = 0.dp
 
 
 // ---------------------------------------------------------------------------
-// Plain data converted from the active chapter JSON
+// Plain chapter blocks supplied by the Model after parsing on the IO dispatcher.
 // ---------------------------------------------------------------------------
 
-internal data class Segment(
+data class Segment(
     val text: String,
     val italic: Boolean,
     val highlighted: Boolean
 )
 
-internal data class ChapterBlock(
+data class ChapterBlock(
     val heading: Boolean,
     val title: String,
     val fullHighlight: Boolean,
     val segments: List<Segment>
 )
 
-internal fun JSONArray?.toBlocks(): List<ChapterBlock> {
-    val arr = this ?: return emptyList()
-
-    return List(arr.length()) { i ->
-        val o = arr.getJSONObject(i)
-        val heading = o.getString("type") == "heading"
-
-        ChapterBlock(
-            heading = heading,
-            title = if (heading) o.getString("title") else "",
-            fullHighlight = !heading && o.optBoolean("fullHighlight", false),
-            segments = if (heading) {
-                emptyList()
-            } else {
-                val s = o.getJSONArray("segments")
-                List(s.length()) { j ->
-                    val g = s.getJSONObject(j)
-                    Segment(
-                        text = g.getString("text"),
-                        italic = g.optBoolean("italic"),
-                        highlighted = g.optBoolean("highlighted")
-                    )
-                }
-            }
-        )
-    }
-}
-
 // ---------------------------------------------------------------------------
-// Page model
+// Page model and pagination entry point
 // ---------------------------------------------------------------------------
 
 internal data class ReaderPageBlock(
@@ -93,7 +64,7 @@ internal data class ReaderPageBlock(
     val fullHighlight: Boolean
 )
 
-/** Everything that changes the layout. Chapter content is NOT part of it. */
+/** All geometry and typography values are grouped into one layout key. */
 internal data class ReaderLayoutKey(
     val widthPx: Int,
     val heightPx: Int,
@@ -101,10 +72,6 @@ internal data class ReaderLayoutKey(
     val fontScale: Float,
     val style: TextStyle
 )
-
-// ---------------------------------------------------------------------------
-// Composable entry point
-// ---------------------------------------------------------------------------
 
 @Composable
 internal fun rememberReaderPages(
@@ -114,18 +81,17 @@ internal fun rememberReaderPages(
     density: Density
 ): List<List<ReaderPageBlock>> {
     val measurer = rememberTextMeasurer()
-    var computed by remember(chapter, key) {
+    var pages by remember(chapter, blocks, key) {
         mutableStateOf<List<List<ReaderPageBlock>>>(emptyList())
     }
 
-    // Only the visible chapter is paginated. A layout change recalculates it;
-    // we intentionally do not retain pages for neighbouring chapters.
-    LaunchedEffect(chapter, key, blocks) {
-        computed = withContext(Dispatchers.Default) {
+    // Parsing is already complete in the Model; only CPU pagination happens here.
+    LaunchedEffect(chapter, blocks, key) {
+        pages = withContext(Dispatchers.Default) {
             calculateReaderPages(blocks, key, density, measurer)
         }
     }
-    return computed
+    return pages
 }
 
 // ---------------------------------------------------------------------------
@@ -146,7 +112,7 @@ internal fun calculateReaderPages(
     val widthPx = (key.widthPx - with(density) { ReaderWidthTrim.roundToPx() })
         .coerceAtLeast(1)
     val lineExtraPx = with(density) { ReaderLineExtra.roundToPx() }
-    val pageHeight = key.heightPx
+    val pageHeight = (key.heightPx - with(density) { ReaderBottomSafety.roundToPx() }).coerceAtLeast(1)
     val paragraphPad = with(density) { 8.dp.roundToPx() } * 2
     val headingPad = with(density) { 10.dp.roundToPx() } * 2
     val cardPad = with(density) { ReaderCardSpaceV.roundToPx() }

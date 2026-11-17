@@ -1,116 +1,62 @@
 # TextForge
 
-TextForge is a Markdown novel reader built with Kotlin and Jetpack Compose. It imports novels, indexes chapters by UTF-8 byte offsets, parses Markdown formatting, and stores reading data for restoration.
+TextForge is a Markdown novel reader built with Kotlin and Jetpack Compose. It imports text/Markdown novels, indexes chapter boundaries by UTF-8 byte offsets, parses one requested chapter at a time, and restores reading progress.
 
-## Project Structure
+## Project structure
 
 ```text
 TextForge/
-├── integrations/
-│   └── NovelImport.kt
-├── navigation/
-├── parser/
-│   ├── ChapterIndexer.kt
-│   ├── parser.kt
-│   └── NovelParser.kt
-├── storage/
-│   ├── NovelStore.kt
-│   └── NovelsModel.kt
+├── app/                 # Android entry point and manifest
+├── parser/              # Markdown parser and chapter byte index
+├── storage/             # Source files, metadata, index and progress
 ├── ui/
-│   ├── components/
-│   │   ├── HeadingComponent.kt
-│   │   ├── HighlightedParagraph.kt
-│   │   ├── InlineHighlight.kt
-│   │   └── NovelTextRenderer.kt
-│   ├── library/
-│   │   └── LibraryScreen.kt
-│   ├── reader/
-│   │   └── ReaderScreen.kt
-│   ├── NovelScreens.kt
-│   └── NovelColors.kt
-├── build.gradle.kts
-├── settings.gradle.kts
-└── gradle.properties
+│   ├── library/         # Library Model, View and import picker
+│   ├── navigation/      # Library/Reader navigation
+│   ├── reader/          # Reader Model, page View, panels and pagination
+│   ├── dictionary/      # StarDict data and lookup
+│   └── components/      # Reusable text and HTML rendering
+└── doc/
 ```
 
-## Modules
+The project has four Gradle modules: `app`, `ui`, `storage` and `parser`. Small navigation and import modules were folded into `ui` to avoid maintaining separate modules for a handful of files.
 
-### integrations
-Handles Android document access, file selection, URI permissions, and novel import metadata.
+## MVI
 
-### parser
-Reads Markdown content, identifies chapter boundaries, calculates UTF-8 byte offsets, and parses novel formatting into structured data.
-                 ### storage
-Manages imported novel metadata, chapter indexes, parsed chapter cache, table of contents, and reading progress.
+The feature flow follows **Model (State) → View → Intent**:
 
-### navigation
-Handles navigation between the Library and Reader screens.
+- **Model / State** — one immutable snapshot describing what the screen should show (`ReaderState` and `LibraryState`).
+- **View** — Compose functions render that snapshot and do not own feature data (`ReaderScreen`, `ReaderPanels`, `LibraryScreen`).
+- **Intent** — a sealed description of a user action (`ReaderIntent`, `LibraryIntent`).
+- **Reducer** — converts an intent or effect result into the next immutable state.
+- **Effects** — ViewModels perform file, parser and dictionary work asynchronously, then feed results back as intents.
 
-### ui
-Contains the application interface.
+`ReaderScreen` renders the page and reports gestures. Reader controls, menus and dialogs are in `ReaderPanels`. Reader state, intents, reducer and asynchronous operations are in `ReaderModel`.
 
-- `library/LibraryScreen.kt` — Displays imported novels.
-- `reader/ReaderScreen.kt` — Displays novel content and reading position.
-- `components/` — Reusable Markdown rendering components.
-- `NovelColors.kt` — Centralized application colors.
-- `NovelScreens.kt` — Existing screen definitions; avoid duplicating screens already separated into `library/` and `reader/`.
+All reader geometry and typography are grouped in one `ReaderLayout` state. Width, height, density, font scale and font size travel through the same layout update rather than independent size-related state variables.
 
-## Data Flow
+The Library follows the same state/intent pattern. The document picker only returns a `Uri`; `LibraryViewModel` owns import, refresh and delete operations.
 
-```text
-Document Picker
-      │
-      ▼
-NovelImport.kt
-      │
-      ▼
-Novel Metadata
-      │
-      ▼
-ChapterIndexer.kt
-      │
-      ▼
-NovelParser.kt
-      │
-      ▼
-NovelStore.kt
-      │
-      ├── Novel Metadata
-      ├── Chapter Byte Index
-      ├── Parsed Chapter Cache
-      ├── Cached TOC
-      └── Reading Progress
-             │
-       ┌─────┴─────┐
-       ▼           ▼
-    Library      Reader
-READING DIRECTION →
+## Data and storage
 
-  [ -2 ] [ -1 ] [ CURRENT ] [ +1 ] [ +2 ] [ +3 ] [ +4 ] [ +5 ]
-     └──── backward ────┘       └──── forward ─────────────┘
-
-```
-
-## Storage
-
-Persistent application data belongs in private app storage (`filesDir`), not temporary cache storage.
+`NovelStore` persists only:
 
 ```text
 files/
 └── novels/
     └── {novelId}/
         ├── source.md
-        ├── toc.cache
-        └── chapters/
-            ├── 000.cache
-            ├── 001.cache
-            └── ...
+        ├── metadata.json
+        ├── index.json
+        └── progress.json
 ```
 
-Reading progress stores the chapter index, block position, and UTF-8 byte offset.
+- `source.md` is the original imported text.
+- `metadata.json` stores the novel identity and display title.
+- `index.json` stores chapter titles and UTF-8 byte ranges.
+- `progress.json` stores the current chapter, block/byte position and page.
 
-## Reading Restoration
+Parsed chapter JSON files, neighbour prefetch, chapter windows and persistent parsing caches are intentionally not used. The reader loads and parses one chapter from its byte range on an IO dispatcher. Pagination runs on the parsed chapter currently held by the Model. Search scans chapters sequentially and does not keep a parsed cache on disk.
 
-On reopening the application, load the saved novel metadata, chapter cache, TOC, and reading progress. Restore the reader without rebuilding the chapter index or parsing the entire source again.
+## Navigation and restoration
 
-Save progress when reading position changes and when the application enters the background.
+The app restores the last opened novel from the session preference and its saved progress. Page changes and chapter navigation persist progress asynchronously. The Library remains the fallback destination when no restorable novel exists.

@@ -40,7 +40,6 @@ android {
 }
 
 dependencies {
-    implementation(project(":navigation"))
     implementation(project(":ui"))
 
     implementation(platform("androidx.compose:compose-bom:2025.10.00"))

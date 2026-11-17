@@ -4,10 +4,10 @@ TextForge uses a native Kotlin StarDict reader inspired by SDCV query behavior. 
 
 ## Install one dictionary
 
-1. Long-press a word in the reader.
-2. Choose **Choose dictionary folder**.
-3. Select the individual dictionary folder containing one matching set of `.ifo`, `.idx` (or `.idx.gz`), and `.dict` (or `.dict.dz`) files.
-4. TextForge imports that dictionary into app-private storage. Selecting another folder replaces the active dictionary.
+1. Open **Reader Tools** and choose **Import Dictionary** (or **Replace Dictionary**).
+2. Select the individual dictionary folder containing one matching set of `.ifo`, `.idx` (or `.idx.gz`), and `.dict` (or `.dict.dz`) files.
+3. TextForge imports that dictionary into app-private storage. Selecting another folder replaces the active dictionary.
+4. Select/copy text with the reader selection gesture, or open **Dictionary Lookup** from Reader Tools to enter a word.
 
 For dictionaries in KOReader's `koreader/data/dict/` folder, select the individual dictionary subfolder, not the parent `dict` folder.
 
