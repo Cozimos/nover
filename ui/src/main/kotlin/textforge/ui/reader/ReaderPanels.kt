@@ -35,7 +35,7 @@ internal fun BoxScope.ReaderPanels(
 ) {
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
-    val tocPageSize = 13
+    val tocPageSize = 15
 
     state.selectedWord?.let { word ->
         AlertDialog(
@@ -186,7 +186,7 @@ internal fun BoxScope.ReaderPanels(
                     val pageCount = (state.chapters.size + tocPageSize - 1) / tocPageSize
                     val start = state.tocPage * tocPageSize
                     val end = minOf(start + tocPageSize, state.chapters.size)
-                    LazyColumn(modifier = Modifier.heightIn(max = 880.dp)) {
+                    LazyColumn(modifier = Modifier.heightIn(max = 888.dp)) {
                         itemsIndexed(state.chapters.subList(start, end)) { index, chapter ->
                             val chapterIndex = start + index
                             TextButton(
@@ -194,8 +194,8 @@ internal fun BoxScope.ReaderPanels(
                                     dispatch(ReaderIntent.NavigateToChapter(chapterIndex))
                                     dispatch(ReaderIntent.ShowContents(false))
                                 },
-                                modifier = Modifier.fillMaxWidth().height(30.dp),
-                                contentPadding = PaddingValues(horizontal = 9.dp, vertical = 11.dp)
+                                modifier = Modifier.fillMaxWidth().height(32.dp),
+                                contentPadding = PaddingValues(horizontal = 9.dp, vertical = 3.dp)
                             ) {
                                 Text(
                                     chapter.title,
