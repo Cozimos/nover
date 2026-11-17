@@ -3,6 +3,7 @@ package textforge.ui.reader
 import android.app.Activity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,6 +11,10 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,19 +28,19 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
-import textforge.parser.ChapterIndex
-import textforge.storage.NovelStore
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import textforge.ui.NovelColors
+import textforge.ui.dictionary.StarDictManager
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,37 +74,27 @@ fun ReaderScreen(
         }
     }
 
-    var chapters by remember(novelId) {
-        mutableStateOf<List<ChapterIndex>>(emptyList())
-    }
+    // MVI boundary: all reader data is owned by the ViewModel's single StateFlow.
+    val readerViewModel: ReaderViewModel = viewModel(
+        key = "reader-$novelId",
+        factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                return ReaderViewModel(context.applicationContext) as T
+            }
+        }
+    )
+    val readerState by readerViewModel.state.collectAsState()
+    val chapters = readerState.chapters
+    val currentChapter = readerState.currentChapter
+    val currentPage = readerState.currentPage
+    val lastChapter = readerState.lastChapter
 
     LaunchedEffect(novelId) {
-        chapters = withContext(Dispatchers.IO) {
-            NovelStore.getChapters(context, novelId)
-        }
+        readerViewModel.dispatch(ReaderIntent.OpenNovel(novelId))
     }
-
-    val lastChapter = (chapters.size - 1).coerceAtLeast(0)
-
-    var currentChapter by remember(novelId) {
-        mutableIntStateOf(0)
-    }
-
-    LaunchedEffect(novelId, chapters) {
-        if (chapters.isNotEmpty()) {
-            val progress = withContext(Dispatchers.IO) {
-                NovelStore.getProgress(context, novelId)
-            }
-
-            currentChapter = progress.chapterNumber.coerceIn(
-                0,
-                chapters.lastIndex
-            )
-        }
-    }
-
-    var currentPage by remember(novelId) {
-        mutableIntStateOf(0)
+    DisposableEffect(readerViewModel) {
+        onDispose { readerViewModel.persistProgress() }
     }
 
     var showBars by remember { mutableStateOf(false) }
@@ -108,6 +103,32 @@ fun ReaderScreen(
     var showSearch by remember { mutableStateOf(false) }
     var showReplace by remember { mutableStateOf(false) }
     var selectedWord by remember { mutableStateOf<String?>(null) }
+    var showDictionarySearch by remember { mutableStateOf(false) }
+    var dictionaryQuery by remember { mutableStateOf("") }
+    var dictionaryDefinition by remember { mutableStateOf<String?>(null) }
+    var dictionaryName by remember { mutableStateOf<String?>(null) }
+    val clipboard = LocalClipboardManager.current
+    val scope = rememberCoroutineScope()
+
+    val dictionaryPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            }
+            scope.launch {
+                val result = withContext(Dispatchers.IO) {
+                    runCatching { StarDictManager.installFromFolder(context, uri) }
+                }
+                result.onSuccess { dictionaryName = it }
+                    .onFailure { dictionaryName = "Import failed: ${it.message ?: "unknown error"}" }
+            }
+        }
+    }
 
     val textLayouts = remember(currentChapter, currentPage) {
         mutableStateMapOf<Int, TextLayoutResult>()
@@ -121,7 +142,6 @@ fun ReaderScreen(
         mutableStateOf<LayoutCoordinates?>(null)
     }
 
-    var searchText by remember { mutableStateOf("") }
     var replaceText by remember { mutableStateOf("") }
 
     val tocPageSize = 13
@@ -130,33 +150,12 @@ fun ReaderScreen(
         mutableIntStateOf(0)
     }
 
-    val paginationCache = remember(novelId) {
-        ReaderPaginationCache()
-    }
-
-    val chapterPages = remember(novelId) {
-        mutableStateMapOf<Int, Int>()
-    }
-
     fun goTo(chapter: Int) {
-        val target = chapter.coerceIn(0, lastChapter)
-
-        if (target != currentChapter) {
-            chapterPages[currentChapter] = currentPage
-            currentChapter = target
-            currentPage = chapterPages[target] ?: 0
-        }
+        readerViewModel.dispatch(ReaderIntent.GoToChapter(chapter))
     }
 
-    LaunchedEffect(novelId, currentChapter, chapters.size) {
-        withContext(Dispatchers.IO) {
-            NovelStore.updateChapterWindow(
-                context = context,
-                id = novelId,
-                current = currentChapter,
-                chapterCount = chapters.size
-            )
-        }
+    fun runNovelSearch(query: String) {
+        readerViewModel.dispatch(ReaderIntent.Search(query))
     }
 
     Box(
@@ -172,8 +171,8 @@ fun ReaderScreen(
             val density = LocalDensity.current
 
             val pageTextStyle = MaterialTheme.typography.bodyLarge.copy(
-                fontSize = 17.sp,
-                lineHeight = 17.sp
+                fontSize = readerState.layout.fontSizeSp.sp,
+                lineHeight = (readerState.layout.fontSizeSp * 1.0f).sp
             )
 
             // Must match the Column padding below exactly.
@@ -187,78 +186,42 @@ fun ReaderScreen(
                 (maxHeight - pagePad * 2 - 4.dp).roundToPx()
             }
 
-            val layoutKey = remember(
-                widthPx,
-                heightPx,
-                density.density,
-                density.fontScale,
-                pageTextStyle
-            ) {
+            // Pagination reads dimensions and typography from the same state
+            // snapshot, rather than maintaining separate "screen" and "font" knobs.
+            val layoutKey = remember(readerState.layout, pageTextStyle) {
                 ReaderLayoutKey(
-                    widthPx = widthPx.coerceAtLeast(1),
-                    heightPx = heightPx.coerceAtLeast(1),
-                    density = density.density,
-                    fontScale = density.fontScale,
+                    widthPx = readerState.layout.widthPx.coerceAtLeast(1),
+                    heightPx = readerState.layout.heightPx.coerceAtLeast(1),
+                    density = readerState.layout.density,
+                    fontScale = readerState.layout.fontScale,
                     style = pageTextStyle
                 )
             }
 
-            val prefetchMeasurer = rememberTextMeasurer()
-
-            // Prefetch neighbouring chapters off the main thread.
-            LaunchedEffect(novelId, currentChapter, chapters.size, layoutKey) {
-                val window = withContext(Dispatchers.IO) {
-                    NovelStore.getChapterWindowCache(
-                        context = context,
-                        id = novelId,
-                        current = currentChapter,
-                        chapterCount = chapters.size
+            LaunchedEffect(widthPx, heightPx, density.density, density.fontScale) {
+                readerViewModel.dispatch(
+                    ReaderIntent.SetLayout(
+                        ReaderLayoutState(
+                            widthPx = widthPx.coerceAtLeast(1),
+                            heightPx = heightPx.coerceAtLeast(1),
+                            density = density.density,
+                            fontScale = density.fontScale,
+                            fontSizeSp = readerState.layout.fontSizeSp
+                        )
                     )
-                }
-
-                withContext(Dispatchers.Default) {
-                    window.forEach { (chapter, chapterBlocks) ->
-                        ensureActive()
-
-                        if (chapter == currentChapter) return@forEach
-
-                        if (paginationCache.get(chapter, layoutKey) == null) {
-                            val pagesForChapter = calculateReaderPages(
-                                blocks = chapterBlocks.toBlocks(),
-                                key = layoutKey,
-                                density = density,
-                                measurer = prefetchMeasurer
-                            )
-
-                            if (pagesForChapter.isNotEmpty()) {
-                                paginationCache.put(
-                                    chapter,
-                                    layoutKey,
-                                    pagesForChapter
-                                )
-                            }
-                        }
-                    }
-                }
+                )
             }
 
             val pages = rememberReaderPages(
                 chapter = currentChapter,
-                cache = paginationCache,
-                load = {
-                    withContext(Dispatchers.IO) {
-                        NovelStore
-                            .getChapterCache(context, novelId, currentChapter)
-                            .toBlocks()
-                    }
-                },
+                blocks = readerState.chapterBlocks,
                 key = layoutKey,
                 density = density
             )
 
             LaunchedEffect(currentChapter, pages.size) {
                 if (pages.isNotEmpty()) {
-                    currentPage = currentPage.coerceIn(0, pages.lastIndex)
+                    readerViewModel.dispatch(ReaderIntent.SetPage(currentPage.coerceIn(0, pages.lastIndex)))
                 }
             }
 
@@ -274,15 +237,15 @@ fun ReaderScreen(
                                 when {
                                     offset.x < size.width * 0.40f -> {
                                         if (currentPage > 0) {
-                                            currentPage--
+                                            readerViewModel.dispatch(ReaderIntent.SetPage(currentPage - 1))
                                         } else if (currentChapter > 0) {
                                             goTo(currentChapter - 1)
                                         }
                                     }
 
-                                    offset.x > size.width * 0.80f -> {
+                                    offset.x > size.width * 0.70f -> {
                                         if (currentPage < pages.lastIndex) {
-                                            currentPage++
+                                            readerViewModel.dispatch(ReaderIntent.SetPage(currentPage + 1))
                                         } else if (currentChapter < lastChapter) {
                                             goTo(currentChapter + 1)
                                         }
@@ -291,57 +254,13 @@ fun ReaderScreen(
                                     else -> showBars = !showBars
                                 }
                             },
-                            onLongPress = { offset ->
-                                val parent = readerCoordinates
-                                    ?: return@detectTapGestures
-                                val pageBlocks = pages.getOrNull(currentPage)
-                                    ?: return@detectTapGestures
-
-                                selectedWord = null
-
-                                pageBlocks.forEachIndexed { index, block ->
-                                    val coordinates = textCoordinates[index]
-                                        ?: return@forEachIndexed
-
-                                    val layout = textLayouts[index]
-                                        ?: return@forEachIndexed
-
-                                    if (block.text.isEmpty()) return@forEachIndexed
-
-                                    val localOffset = coordinates.localPositionOf(
-                                        parent,
-                                        offset
-                                    )
-
-                                    if (
-                                        localOffset.x < 0f ||
-                                        localOffset.y < 0f ||
-                                        localOffset.x > coordinates.size.width.toFloat() ||
-                                        localOffset.y > coordinates.size.height.toFloat()
-                                    ) return@forEachIndexed
-
-                                    val characterOffset = layout
-                                        .getOffsetForPosition(localOffset)
-                                        .coerceIn(0, block.text.length - 1)
-
-                                    val wordRange =
-                                        layout.getWordBoundary(characterOffset)
-
-                                    val word = block.text.text
-                                        .substring(wordRange.start, wordRange.end)
-                                        .trim()
-
-                                    if (word.isNotEmpty()) {
-                                        selectedWord = word
-                                        return@forEachIndexed
-                                    }
-                                }
-                            }
                         )
                     }
                     .padding(pagePad)
             ) {
-                pages.getOrNull(currentPage)?.forEachIndexed { index, pageBlock ->
+                SelectionContainer {
+                    Column {
+                        pages.getOrNull(currentPage)?.forEachIndexed { index, pageBlock ->
                     val onLayout: (TextLayoutResult) -> Unit = {
                         textLayouts[index] = it
                     }
@@ -380,18 +299,57 @@ fun ReaderScreen(
                             )
                         }
                     }
+                        }
+                    }
                 }
             }
         }
 
+        // Startup and chapter reads are asynchronous; render their state instead
+        // of blocking the first frame while the byte range is read and parsed.
+        if (readerState.isStarting ||
+            (readerState.isLoadingChapter && readerState.chapterBlocks.isEmpty())
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+
+        readerState.error?.takeIf { !showSearch }?.let { message ->
+            Text(
+                text = message,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp)
+            )
+        }
+
         selectedWord?.let { word ->
             AlertDialog(
-                onDismissRequest = { selectedWord = null },
+                onDismissRequest = { selectedWord = null; dictionaryDefinition = null },
                 title = { Text(word) },
-                text = { Text("Dictionary lookup") },
+                text = { Text(dictionaryDefinition ?: "Choose an action for this selection.") },
                 confirmButton = {
-                    TextButton(onClick = { selectedWord = null }) {
-                        Text("Close")
+                    Row {
+                        TextButton(onClick = {
+                            clipboard.setText(AnnotatedString(word))
+                            selectedWord = null
+                            dictionaryDefinition = null
+                        }) { Text("Copy") }
+                        TextButton(onClick = {
+                            scope.launch {
+                                val result = withContext(Dispatchers.IO) {
+                                    StarDictManager.lookupSmart(context, word)
+                                }
+                                dictionaryDefinition = result.entry?.definition
+                                    ?: if (result.suggestions.isNotEmpty()) "No exact entry. Suggestions: ${result.suggestions.joinToString()}" else "No dictionary entry found. Import a StarDict dictionary from Reader Tools."
+                            }
+                        }) { Text("Look Up") }
+                        TextButton(onClick = { selectedWord = null; dictionaryDefinition = null }) { Text("Close") }
                     }
                 }
             )
@@ -496,6 +454,22 @@ fun ReaderScreen(
                     Text("Search Word")
                 }
 
+                OutlinedButton(
+                    onClick = { dictionaryQuery = clipboard.getText()?.text.orEmpty(); showMenu = false; showDictionarySearch = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Dictionary Lookup") }
+
+                OutlinedButton(
+                    onClick = { dictionaryPicker.launch(null) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (StarDictManager.installedName(context) == null) "Import Dictionary" else "Replace Dictionary")
+                }
+                Text(
+                    dictionaryName ?: StarDictManager.installedName(context)?.let { "Dictionary: $it" } ?: "No dictionary imported",
+                    style = MaterialTheme.typography.bodySmall
+                )
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -541,7 +515,7 @@ fun ReaderScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 18.dp, vertical = 3.dp)
+                        .padding(horizontal = 21.dp, vertical = 5.dp)
                 ) {
                     Text(
                         "Table of Contents",
@@ -569,8 +543,8 @@ fun ReaderScreen(
                                     .fillMaxWidth()
                                     .height(30.dp),
                                 contentPadding = PaddingValues(
-                                    horizontal = 5.dp,
-                                    vertical = 1.dp
+                                    horizontal = 9.dp,
+                                    vertical = 11.dp
                                 )
                             ) {
                                 Text(
@@ -632,6 +606,29 @@ fun ReaderScreen(
         }
     }
 
+    if (showDictionarySearch) {
+        AlertDialog(
+            onDismissRequest = { showDictionarySearch = false },
+            containerColor = NovelColors.MenuBackground,
+            title = { Text("Dictionary Lookup") },
+            text = {
+                OutlinedTextField(
+                    value = dictionaryQuery,
+                    onValueChange = { dictionaryQuery = it },
+                    label = { Text("Word") },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    selectedWord = dictionaryQuery.trim().takeIf { it.isNotEmpty() }
+                    dictionaryDefinition = null
+                    showDictionarySearch = false
+                }) { Text("Look Up") }
+            }
+        )
+    }
+
     // SEARCH
     if (showSearch) {
         AlertDialog(
@@ -641,15 +638,40 @@ fun ReaderScreen(
                 Text("Search Novel")
             },
             text = {
-                OutlinedTextField(
-                    value = searchText,
-                    onValueChange = { searchText = it },
-                    label = { Text("Search word or phrase") },
-                    singleLine = true
-                )
+                Column {
+                    OutlinedTextField(
+                        value = readerState.searchQuery,
+                        onValueChange = { readerViewModel.dispatch(ReaderIntent.UpdateSearchQuery(it)) },
+                        label = { Text("Search word or phrase") },
+                        singleLine = true
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    if (readerState.isSearching) CircularProgressIndicator()
+                    readerState.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                    LazyColumn(modifier = Modifier.heightIn(max = 360.dp)) {
+                        itemsIndexed(readerState.searchResults) { _, result ->
+                            TextButton(
+                                onClick = {
+                                    goTo(result.chapter)
+                                    readerViewModel.dispatch(ReaderIntent.SetPage(0))
+                                    showSearch = false
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column {
+                                    Text("${result.chapterTitle} · Chapter ${result.chapter + 1}", fontWeight = FontWeight.Bold)
+                                    Text(result.snippet, maxLines = 3)
+                                }
+                            }
+                        }
+                    }
+                    if (readerState.searchResults.isEmpty() && !readerState.isSearching && readerState.searchQuery.isNotBlank()) {
+                        Text("No matches yet. Tap Search to scan the novel.")
+                    }
+                }
             },
             confirmButton = {
-                TextButton(onClick = { showSearch = false }) {
+                TextButton(onClick = { runNovelSearch(readerState.searchQuery) }) {
                     Text("Search")
                 }
             }
@@ -667,8 +689,8 @@ fun ReaderScreen(
             text = {
                 Column {
                     OutlinedTextField(
-                        value = searchText,
-                        onValueChange = { searchText = it },
+                        value = readerState.searchQuery,
+                        onValueChange = { readerViewModel.dispatch(ReaderIntent.UpdateSearchQuery(it)) },
                         label = { Text("Find") }
                     )
 
@@ -689,3 +711,5 @@ fun ReaderScreen(
         )
     }
 }
+
+

@@ -39,7 +39,7 @@ internal val ReaderCardSpaceH = 0.dp
 
 
 // ---------------------------------------------------------------------------
-// Plain data (parsed once from JSON, off the main thread)
+// Plain data converted from the active chapter JSON
 // ---------------------------------------------------------------------------
 
 internal data class Segment(
@@ -84,7 +84,7 @@ internal fun JSONArray?.toBlocks(): List<ChapterBlock> {
 }
 
 // ---------------------------------------------------------------------------
-// Page model + cache
+// Page model
 // ---------------------------------------------------------------------------
 
 internal data class ReaderPageBlock(
@@ -102,41 +102,6 @@ internal data class ReaderLayoutKey(
     val style: TextStyle
 )
 
-internal class ReaderPaginationCache(private val maxEntries: Int = 8) {
-
-    private class Entry(
-        val key: ReaderLayoutKey,
-        val pages: List<List<ReaderPageBlock>>
-    )
-
-    private val entries = LinkedHashMap<Int, Entry>(16, 0.75f, true)
-
-    @Synchronized
-    fun get(chapter: Int, key: ReaderLayoutKey): List<List<ReaderPageBlock>>? =
-        entries[chapter]?.takeIf { it.key == key }?.pages
-
-    @Synchronized
-    fun put(chapter: Int, key: ReaderLayoutKey, pages: List<List<ReaderPageBlock>>) {
-        entries[chapter] = Entry(key, pages)
-        while (entries.size > maxEntries) {
-            val eldest = entries.keys.iterator()
-            eldest.next()
-            eldest.remove()
-        }
-    }
-
-    /** Call when a chapter's text changes (find & replace). */
-    @Synchronized
-    fun invalidate(chapter: Int) {
-        entries.remove(chapter)
-    }
-
-    @Synchronized
-    fun clear() {
-        entries.clear()
-    }
-}
-
 // ---------------------------------------------------------------------------
 // Composable entry point
 // ---------------------------------------------------------------------------
@@ -144,40 +109,23 @@ internal class ReaderPaginationCache(private val maxEntries: Int = 8) {
 @Composable
 internal fun rememberReaderPages(
     chapter: Int,
-    cache: ReaderPaginationCache,
-    load: suspend () -> List<ChapterBlock>,
+    blocks: List<ChapterBlock>,
     key: ReaderLayoutKey,
     density: Density
 ): List<List<ReaderPageBlock>> {
-
     val measurer = rememberTextMeasurer()
-
-    // Synchronous hit (prefetched): no disk, no recompute, no blank frame.
-    val cached = remember(chapter, key) { cache.get(chapter, key) }
-
     var computed by remember(chapter, key) {
-        mutableStateOf<List<List<ReaderPageBlock>>?>(null)
+        mutableStateOf<List<List<ReaderPageBlock>>>(emptyList())
     }
 
-    LaunchedEffect(chapter, key) {
-        if (cached != null) return@LaunchedEffect
-
-        cache.get(chapter, key)?.let {
-            computed = it
-            return@LaunchedEffect
-        }
-
-        val blocks = load()
-
-        val result = withContext(Dispatchers.Default) {
+    // Only the visible chapter is paginated. A layout change recalculates it;
+    // we intentionally do not retain pages for neighbouring chapters.
+    LaunchedEffect(chapter, key, blocks) {
+        computed = withContext(Dispatchers.Default) {
             calculateReaderPages(blocks, key, density, measurer)
         }
-
-        if (result.isNotEmpty()) cache.put(chapter, key, result)
-        computed = result
     }
-
-    return cached ?: computed ?: emptyList()
+    return computed
 }
 
 // ---------------------------------------------------------------------------
