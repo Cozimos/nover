@@ -176,13 +176,13 @@ internal fun BoxScope.ReaderPanels(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 21.dp, vertical = 5.dp)
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 2.dp)
                 ) {
                     Text("Table of Contents", style = MaterialTheme.typography.titleLarge)
                     val pageCount = (state.chapters.size + tocPageSize - 1) / tocPageSize
                     val start = state.tocPage * tocPageSize
                     val end = minOf(start + tocPageSize, state.chapters.size)
-                    LazyColumn(modifier = Modifier.heightIn(max = 888.dp)) {
+                    LazyColumn(modifier = Modifier.heightIn(max = 700.dp)) {
                     itemsIndexed(state.chapters.subList(start, end)) { index, chapter ->
                     val chapterIndex = start + index
                     val isCurrent = chapterIndex == state.chapter
