@@ -20,6 +20,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import textforge.ui.NovelColors
 import textforge.ui.dictionary.StarDictManager
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import textforge.ui.dictionary.StarDictEntryView
 
 /**
  * All reader chrome and secondary panels live outside the page renderer.
@@ -37,32 +43,7 @@ internal fun BoxScope.ReaderPanels(
     val clipboard = LocalClipboardManager.current
     val tocPageSize = 15
 
-    state.selectedWord?.let { word ->
-        AlertDialog(
-            onDismissRequest = {
-                dispatch(ReaderIntent.SetSelectedWord(null))
-                dispatch(ReaderIntent.SetDictionaryDefinition(null))
-            },
-            title = { Text(word) },
-            text = { Text(state.dictionaryDefinition ?: "Choose an action for this selection.") },
-            confirmButton = {
-                Row {
-                    TextButton(onClick = {
-                        clipboard.setText(AnnotatedString(word))
-                        dispatch(ReaderIntent.SetSelectedWord(null))
-                        dispatch(ReaderIntent.SetDictionaryDefinition(null))
-                    }) { Text("Copy") }
-                    TextButton(onClick = { dispatch(ReaderIntent.LookupWord(word)) }) {
-                        Text("Look Up")
-                    }
-                    TextButton(onClick = {
-                        dispatch(ReaderIntent.SetSelectedWord(null))
-                        dispatch(ReaderIntent.SetDictionaryDefinition(null))
-                    }) { Text("Close") }
-                }
-            }
-        )
-    }
+
 
     AnimatedVisibility(
         visible = state.showBars,
@@ -124,7 +105,11 @@ internal fun BoxScope.ReaderPanels(
                 ) { Text("Search Word") }
                 OutlinedButton(
                     onClick = {
-                        dispatch(ReaderIntent.SetDictionaryQuery(clipboard.getText()?.text.orEmpty()))
+                       dispatch(ReaderIntent.SetDictionaryQuery(
+                            clipboard.getText()?.text.orEmpty()
+                            .trim()
+                            .trim(',', '.', '\'', '"', ':', ';', '!', '?', '(', ')', '[', ']', '“', '”', '‘', '’')
+))
                         dispatch(ReaderIntent.ShowMenu(false))
                         dispatch(ReaderIntent.ShowDictionarySearch(true))
                     },
@@ -173,7 +158,17 @@ internal fun BoxScope.ReaderPanels(
     }
 
     if (state.showContents) {
-        Dialog(onDismissRequest = { dispatch(ReaderIntent.ShowContents(false)) }) {
+    // show the page the current chapter is in
+        LaunchedEffect(state.showContents) {
+        if (state.showContents) {
+            val correctPage = state.chapter / tocPageSize
+            if (state.tocPage != correctPage) {
+                dispatch(ReaderIntent.SetTocPage(correctPage))
+            }
+        }
+    }
+
+    Dialog(onDismissRequest = { dispatch(ReaderIntent.ShowContents(false)) }) {
             Surface(
                 color = NovelColors.MenuBackground,
                 shape = RoundedCornerShape(12.dp),
@@ -187,25 +182,39 @@ internal fun BoxScope.ReaderPanels(
                     val start = state.tocPage * tocPageSize
                     val end = minOf(start + tocPageSize, state.chapters.size)
                     LazyColumn(modifier = Modifier.heightIn(max = 888.dp)) {
-                        itemsIndexed(state.chapters.subList(start, end)) { index, chapter ->
-                            val chapterIndex = start + index
-                            TextButton(
-                                onClick = {
-                                    dispatch(ReaderIntent.NavigateToChapter(chapterIndex))
-                                    dispatch(ReaderIntent.ShowContents(false))
-                                },
-                                modifier = Modifier.fillMaxWidth().height(32.dp),
-                                contentPadding = PaddingValues(horizontal = 9.dp, vertical = 3.dp)
-                            ) {
-                                Text(
-                                    chapter.title,
-                                    color = if (chapterIndex == state.chapter) Color(0xFFFFCC80) else Color.Black,
-                                    fontWeight = if (chapterIndex == state.chapter) FontWeight.Bold else FontWeight.Normal,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
-                        }
-                    }
+                    itemsIndexed(state.chapters.subList(start, end)) { index, chapter ->
+                    val chapterIndex = start + index
+                    val isCurrent = chapterIndex == state.chapter
+            TextButton(
+            onClick = {
+                dispatch(ReaderIntent.NavigateToChapter(chapterIndex))
+                dispatch(ReaderIntent.ShowContents(false))
+            },
+            // FIX 1: No fixed height. Let it grow to 2-3 lines.
+            // FIX 2: Align to start, give it vertical breathing room.
+            modifier = Modifier.fillMaxWidth()
+                .heightIn(min = 48.dp),
+            contentPadding = PaddingValues(
+                horizontal = 12.dp,
+                vertical = 10.dp
+            )
+        ) {
+            Text(
+                text = chapter.title,
+                color = if (isCurrent) Color(0xFFFFCC80) else Color.Black,
+                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                // FIX 3: This is the key part - allow wrapping
+                softWrap = true,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                // FIX 4: Force left-align inside TextButton's Row
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Start,
+                lineHeight = 20.sp
+            )
+        }
+    }
+}
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -231,26 +240,48 @@ internal fun BoxScope.ReaderPanels(
     }
 
     if (state.showDictionarySearch) {
-        AlertDialog(
-            onDismissRequest = { dispatch(ReaderIntent.ShowDictionarySearch(false)) },
-            containerColor = NovelColors.MenuBackground,
-            title = { Text("Dictionary Lookup") },
-            text = {
+    AlertDialog(
+        onDismissRequest = {
+            dispatch(ReaderIntent.ShowDictionarySearch(false))
+            dispatch(ReaderIntent.SetDictionaryDefinition(null))
+        },
+        containerColor = NovelColors.MenuBackground,
+        title = { Text("Dictionary Lookup") },
+        text = {
+            Column {
                 OutlinedTextField(
                     value = state.dictionaryQuery,
                     onValueChange = { dispatch(ReaderIntent.SetDictionaryQuery(it)) },
                     label = { Text("Word") },
                     singleLine = true
                 )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    dispatch(ReaderIntent.SetSelectedWord(state.dictionaryQuery.trim().takeIf { it.isNotEmpty() }))
-                    dispatch(ReaderIntent.ShowDictionarySearch(false))
-                }) { Text("Look Up") }
+                Spacer(Modifier.height(12.dp))
+
+                // Result shows HERE, in same dialog. No 2nd dialog.
+                if (state.dictionaryDefinition != null) {
+                    Text(state.dictionaryDefinition ?: "")
+                } else {
+                    Text("Type a word and tap Look Up.")
+                }
             }
-        )
-    }
+        },
+        confirmButton = {
+            Row {
+                TextButton(onClick = {
+                    val word = state.dictionaryQuery.trim()
+                    if (word.isNotEmpty()) {
+                        dispatch(ReaderIntent.LookupWord(word))
+                    }
+                }) { Text("Look Up") }
+
+                TextButton(onClick = {
+                    dispatch(ReaderIntent.ShowDictionarySearch(false))
+                    dispatch(ReaderIntent.SetDictionaryDefinition(null))
+                }) { Text("Close") }
+            }
+        }
+    )
+}
 
     if (state.showSearch) {
         AlertDialog(

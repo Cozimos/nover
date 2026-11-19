@@ -161,6 +161,14 @@ class ReaderViewModel(private val appContext: Context) : ViewModel() {
     private var openJob: Job? = null
     private val progressMutex = Mutex()
     private var progressVersion = 0L
+//cleans trailing , . ' "
+    private fun cleanWord(raw: String): String {
+    return raw
+        .trim()
+        .trim(',', '.', '\'', '"', ':', ';', '!', '?', '(', ')', '[', ']', '{', '}',
+            '“', '”', '‘', '’', '«', '»', '—', '-', '–')
+        .trim()
+}
 
     fun dispatch(intent: ReaderIntent) {
         when (intent) {
@@ -178,7 +186,8 @@ class ReaderViewModel(private val appContext: Context) : ViewModel() {
             }
             is ReaderIntent.Search -> search(intent.query)
             is ReaderIntent.ImportDictionary -> importDictionary(intent.uri)
-            is ReaderIntent.LookupWord -> lookupWord(intent.word)
+            // cleanWord
+            is ReaderIntent.LookupWord -> lookupWord(cleanWord(intent.word))
             else -> reduce(intent)
         }
     }
