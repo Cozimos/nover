@@ -21,13 +21,13 @@ import androidx.compose.ui.unit.sp
 fun formatStarDictFastRead(raw: String, hideHeadword: Boolean = false): String {
     var html = raw
 
-    // Remove color/style wrappers while preserving their textual contents.
+    html = html.replace(Regex("\\s+style\\s*=\\s*\"[^\"]*\"", RegexOption.IGNORE_CASE), "")
+
     html = html.replace(
         Regex("</?(font|span|c)\\b[^>]*>", RegexOption.IGNORE_CASE),
         ""
     )
 
-    // Normalize the dictionary headword.
     html = if (hideHeadword) {
         html.replace(Regex("<k>.*?</k>\\s*", RegexOption.IGNORE_CASE), "")
     } else {
@@ -37,7 +37,6 @@ fun formatStarDictFastRead(raw: String, hideHeadword: Boolean = false): String {
         )
     }
 
-    // Normalize common StarDict-specific tags.
     html = html
         .replace(
             Regex("<kref[^>]*>(.*?)</kref>", RegexOption.IGNORE_CASE),
@@ -52,7 +51,6 @@ fun formatStarDictFastRead(raw: String, hideHeadword: Boolean = false): String {
             ""
         )
 
-    // Make nested blockquotes readable without preserving excessive markup.
     html = html
         .replace(
             Regex("<blockquote>\\s*<blockquote>\\s*", RegexOption.IGNORE_CASE),
@@ -71,7 +69,6 @@ fun formatStarDictFastRead(raw: String, hideHeadword: Boolean = false): String {
             "</b><br>"
         )
 
-    // Remove redundant leading, trailing, and repeated blank lines.
     return html
         .replace(Regex("^(<br>\\s*)+", RegexOption.IGNORE_CASE), "")
         .replace(Regex("(<br>\\s*){3,}", RegexOption.IGNORE_CASE), "<br><br>")
