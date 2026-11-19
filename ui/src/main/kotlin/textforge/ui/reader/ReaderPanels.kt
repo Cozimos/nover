@@ -182,7 +182,7 @@ internal fun BoxScope.ReaderPanels(
                     val pageCount = (state.chapters.size + tocPageSize - 1) / tocPageSize
                     val start = state.tocPage * tocPageSize
                     val end = minOf(start + tocPageSize, state.chapters.size)
-                    LazyColumn(modifier = Modifier.heightIn(max = 3800.dp)) {
+                    LazyColumn(modifier = Modifier.heightIn(max = 380.dp)) {
                     itemsIndexed(state.chapters.subList(start, end)) { index, chapter ->
                     val chapterIndex = start + index
                     val isCurrent = chapterIndex == state.chapter

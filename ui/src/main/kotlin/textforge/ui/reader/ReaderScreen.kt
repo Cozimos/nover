@@ -160,11 +160,11 @@ fun ReaderScreen(
                             if (up != null && !up.isConsumed) {
                                 val x = down.position.x
                                 when {
-                                    x < size.width * 0.40f -> {
+                                    x < size.width * 0.15f -> {
                                         if (currentPage > 0) send(ReaderIntent.SetPage(currentPage - 1))
                                         else if (currentChapter > 0) goTo(currentChapter - 1)
                                     }
-                                    x > size.width * 0.70f -> {
+                                    x > size.width * 0.85f -> {
                                         if (currentPage < pages.lastIndex) send(ReaderIntent.SetPage(currentPage + 1))
                                         else if (currentChapter < lastChapter) goTo(currentChapter + 1)
                                     }
