@@ -182,7 +182,7 @@ internal fun BoxScope.ReaderPanels(
                     val pageCount = (state.chapters.size + tocPageSize - 1) / tocPageSize
                     val start = state.tocPage * tocPageSize
                     val end = minOf(start + tocPageSize, state.chapters.size)
-                    LazyColumn(modifier = Modifier.heightIn(max = 700.dp)) {
+                    LazyColumn(modifier = Modifier.heightIn(max = 3800.dp)) {
                     itemsIndexed(state.chapters.subList(start, end)) { index, chapter ->
                     val chapterIndex = start + index
                     val isCurrent = chapterIndex == state.chapter
@@ -194,10 +194,10 @@ internal fun BoxScope.ReaderPanels(
             // FIX 1: No fixed height. Let it grow to 2-3 lines.
             // FIX 2: Align to start, give it vertical breathing room.
             modifier = Modifier.fillMaxWidth()
-                .heightIn(min = 40.dp),
+                .heightIn(min = 39.dp),
             contentPadding = PaddingValues(
                 horizontal = 10.dp,
-                vertical = 10.dp
+                vertical = 9.dp
             )
         ) {
             Text(
