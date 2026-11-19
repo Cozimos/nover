@@ -26,6 +26,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import textforge.ui.dictionary.StarDictEntryView
 
 /**
  * All reader chrome and secondary panels live outside the page renderer.
@@ -193,9 +194,9 @@ internal fun BoxScope.ReaderPanels(
             // FIX 1: No fixed height. Let it grow to 2-3 lines.
             // FIX 2: Align to start, give it vertical breathing room.
             modifier = Modifier.fillMaxWidth()
-                .heightIn(min = 48.dp),
+                .heightIn(min = 40.dp),
             contentPadding = PaddingValues(
-                horizontal = 12.dp,
+                horizontal = 10.dp,
                 vertical = 10.dp
             )
         ) {
@@ -259,7 +260,19 @@ internal fun BoxScope.ReaderPanels(
 
                 // Result shows HERE, in same dialog. No 2nd dialog.
                 if (state.dictionaryDefinition != null) {
-                    Text(state.dictionaryDefinition ?: "")
+                    // Keep long definitions inside the dialog and let the entry scroll.
+                    // SelectionContainer remains inside StarDictEntryView so text can be copied.
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 360.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        StarDictEntryView(
+                            rawEntry = state.dictionaryDefinition.orEmpty(),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 } else {
                     Text("Type a word and tap Look Up.")
                 }
